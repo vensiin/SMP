@@ -10,7 +10,10 @@ import numpy as np # A math library for arrays, vectors, and numerical computing
 import tensorflow as tf # Imports TensorFlow, a machine learning library.
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
 import os
+
 from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # 1. Obtaining the data
@@ -18,7 +21,8 @@ from dotenv import load_dotenv
 data_source = "kaggle"
 lower_case = data_source.lower()
 
-api_key = "0NSF2RAF00LQ4N9K"
+api_key = os.getenv("API_KEY")
+
 ticker = "AAL"
 
 # Conditional that checks which method we are using
