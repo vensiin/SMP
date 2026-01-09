@@ -1,0 +1,4 @@
+1. Alphavantage API does not let us get the full historical data anymore, so we are currently stuck with AAL & Apple up to August 2025
+2. Currently using HPQ kaggle data, just to follow the guide but after we will attempt with more up to date data
+3. Value error when attempting to go through scale the elements in the hpq txt file
+4. Test_data is missing its values
