@@ -22,5 +22,29 @@ class DataGenerator(object):
                 self.cursor[i] = np.random.randint(0, (i + 1) * self.segments)
 
             batch_data[i] = self.prices[self.cursor[i]]
+            batch_labels[i] = self.prices[self.cursor[i] + np.random.randint(0,5)]
+
+            self.cursor[i] = (self.cursor[i] + 1) % self.prices_length
+
+        return batch_data, batch_labels
+
+    def unroll_batches(self):
+
+        unroll_data, unroll_labels = [], []
+        init_data, init_label = None, None
+
+        for ui in range(self.num_unroll):
+            data, labels = self.next_batch()
+
+            unroll_data.append(data)
+            unroll_labels.append(labels)
+
+        return unroll_data, unroll_labels
+
+    def reset_indices(self):
+        for i in range(self.batch_size):
+            self.cursor[i] = np.random.randint(0, min((i + 1) * self.segments),self.prices_length - 1)
+
+
 
 

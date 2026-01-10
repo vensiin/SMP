@@ -9,6 +9,7 @@ import os # Lets you interact with the operating system (like checking if a file
 import numpy as np # A math library for arrays, vectors, and numerical computing.
 import tensorflow as tf # Imports TensorFlow, a machine learning library.
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
+from dataGenerator import *
 import os
 
 from dotenv import load_dotenv
@@ -268,3 +269,13 @@ ax.set_ylabel("Mid Price", fontsize = 20)
 ax.legend(fontsize = 20, loc = 'upper left')
 ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize = 25)
 plt.show()
+
+dg = DataGenerator(train_data, 5, 5)
+u_data, u_labels = dg.unroll_batches()
+
+for ui,(data,label) in enumerate(zip(u_data, u_labels)):
+    print(f"Unrolled index: {ui}")
+    data_index = data
+    label_index = label
+    print(f"tInputs: {data} \n")
+    print(f"tOutputs: {label}\n")
