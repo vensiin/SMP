@@ -5,10 +5,11 @@ from tensorflow.python.ops.gen_batch_ops import batch
 class DataGenerator(object):
     def __init__(self, prices, batch_size, num_unroll):
         self.prices = prices # Stores our array of stock prices
-        self.prices_length = len(self.prices) - num_unroll #
+        # Used so we do not go out of bounds.
+        self.prices_length = len(self.prices) - num_unroll # prices initialized with precaution of going out of bounds.
         self.batch_size = batch_size # of sections/sequences (Think of it as the columns) (Also known as the sequences)
         self.num_unroll = num_unroll # of elements per sequence/batch_size (Think of it as the rows) (Also known as the time steps)
-        self.segments = self.prices_length // self.batch_size
+        self.segments = self.prices_length // self.batch_size # Splits data so sequences do not overlap
 
         self.cursor = [offset * self.segments for offset in range(self.batch_size)]
 
@@ -21,15 +22,29 @@ class DataGenerator(object):
         At one time step, we take one value from each sequence. So it would be [0 5 10 15] (Batch_size = 4). Then the next time step would be [1, 6, 11, 16], however 0 -> 1 is a time step and 0 -> 5 is changing sequences.
                                                                                [1 6 11 16] easier to understand like this. Rows = time steps, columns = sequences.
                                                                                [2 7 12 17] Each row is ONE time step, 📌 Each column is ONE sequence
+                                                                               
+        prices_length = What we initialized our price to so it does not go down.
+        For example:
+        my_arr = [1 2 3 4 5]
+        num_unrolling = 3 (we need this because this is how many values we are going to be time stepping at once)
+        i = 2(the element 3 in the array)
+        If we try unrolling, we will get an out of bounds error
+        
+        segments = basically sliding window all over again so that the sequences do not overlap with the same data
+        my_arr = [99 values]. A = 0:24, B = 24:49 & so on
+        
         
         Way to think about it:
         Data Set = Long Book
         Sequence = n # of people reading different chapters (depends on batch_size)
         Batch  = current word each person is reading (current element/data point)
-        Batch_size = # of people reading;
+        Batch_size = # of people reading (columns)
+        num_unroll = # of timesteps per sequence or number of rows (rows)
+        princes_length = threshold of pages to read
+        Segment = each person gets their own chapter
         """
 
-
+    # Generates batch of data and labels
     def next_batch(self):
         batch_data = np.zeros((self.batch_size), dtype=np.float32)
         batch_labels = np.zeros((self.batch_size), dtype=np.float32)
