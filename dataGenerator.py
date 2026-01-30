@@ -68,9 +68,10 @@ class DataGenerator(object):
             # This is the outputs
             batch_labels[i] = self.prices[self.cursor[i] + np.random.randint(0,5)] # Instead of using cursor + 1, we use cursor with a random int from 0 to 5 for data augmentation
 
-            self.cursor[i] = (self.cursor[i] + 1) % self.prices_length
+            # Gets the pointer/position of the element/timestep we are at for each sequence and moves it one time step. This is how the rows advance
+            self.cursor[i] = (self.cursor[i] + 1) % self.prices_length # Ex. B4 nb: Cursor[0] = 0, After nb: (2415 + 1) % 12075 = 2416 because if the first # is smaller than the divisor, it returns the first number;
 
-        return batch_data, batch_labels
+        return batch_data, batch_labels # Returns arrays
 
     def unroll_batches(self):
 
