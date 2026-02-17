@@ -1,3 +1,4 @@
+import keras.layers
 from fontTools.misc.arrayTools import scaleRect
 from pandas.io.xml import preprocess_data # This is related to handling XML data with Pandas. https://pandas.pydata.org/docs/
 from pandas_datareader import data # This can fetch stock/financial data from sources like Yahoo, Google, etc. # https://pandas-datareader.readthedocs.io/en/latest/index.html
@@ -9,14 +10,12 @@ import os # Lets you interact with the operating system (like checking if a file
 import numpy as np # A math library for arrays, vectors, and numerical computing.
 import tensorflow as tf # Imports TensorFlow, a machine learning library.
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
+from tensorflow.python.keras.legacy_tf_layers.core import dropout
 from dataGenerator import *
 import os
-
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
 # 1. Obtaining the data
 
 data_source = "kaggle"
@@ -271,11 +270,29 @@ ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize 
 plt.show()
 
 dg = DataGenerator(train_data, 5, 5)
-u_data, u_labels = dg.unroll_batches()
+u_data, u_labels = dg.unroll_batches() # Stores the arrays of data & labels from the function
 
-for ui,(data,label) in enumerate(zip(u_data, u_labels)):
+# For loop iterating through both the index with data & labels
+for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate basically create 2 tuples. One tuple with u_data & u_labels and another with an index with the tuple u_data & u_labels
+                                                         # EX. (0, ([10, 12, 14, 16], [11, 13, 16, 18])) is what it would look like
+                                                         #    Index        Data             Label
     print(f"Unrolled index: {ui}")
-    data_index = data
-    label_index = label
-    print(f"tInputs: {data} \n")
+    print(f"tInputs: {data}")
     print(f"tOutputs: {label}\n")
+
+
+D = 1 # Dimensionality. Only viewing one thing price.
+num_unrollings = 50 # How many time steps we are looking back
+batch_size = 500 # 500 Sequences
+num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
+n_layers = len(num_nodes)
+dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
+tf.compat.v1.reset_default_graph() # Clears any previous TF models from memory
+train_i, train_o = [], []
+
+# This creates empty placeholders to feed the data from the dataGenerator into the placeholders
+for ui in range(num_unrollings):
+    train_i.append(tf.compat.v1.placeholder(tf.float32, [batch_size, D], name = f"Train inputs: {ui}"))
+    train_o.append(tf.compat.v1.placeholder(tf.float32, [batch_size, 1], name = f"Train outputs: {ui}"))
+
+lstm_cells = [keras.layers.LSTM]

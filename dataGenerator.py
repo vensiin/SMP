@@ -63,9 +63,9 @@ class DataGenerator(object):
                 # Resets the cursor to safe random position inside its segment
                 self.cursor[i] = np.random.randint(0, (i + 1) * self.segments) # (i + 1) * self.segments ensures it is inside its segment
 
-            # This is the inputs
+            # This is the inputs. What we have/know. Current price
             batch_data[i] = self.prices[self.cursor[i]] # Takes the current segment index and store it inside the array
-            # This is the outputs
+            # This is the outputs. What we want to predict/Future price
             batch_labels[i] = self.prices[self.cursor[i] + np.random.randint(0,5)] # Instead of using cursor + 1, we use cursor with a random int from 0 to 5 for data augmentation
 
             # Gets the pointer/position of the element/timestep we are at for each sequence and moves it one time step. This is how the rows advance
@@ -73,18 +73,20 @@ class DataGenerator(object):
 
         return batch_data, batch_labels # Returns arrays
 
+    # Returns multiple time steps of data
     def unroll_batches(self):
 
-        unroll_data, unroll_labels = [], []
-        init_data, init_label = None, None
+        unroll_data, unroll_labels = [], [] # Holding the data. These are 2 separate arrays just in the same line
 
+        # Loops depending on how much unroll is. these are basically the rows
         for ui in range(self.num_unroll):
-            data, labels = self.next_batch()
+            data, labels = self.next_batch() # Assigns next_batch function to variable called data & labels
+                                             # Calls next_batch num_unroll times
 
-            unroll_data.append(data)
-            unroll_labels.append(labels)
+            unroll_data.append(data) # Appends the data to the list
+            unroll_labels.append(labels) # Appends the output we want to predict
 
-        return unroll_data, unroll_labels
+        return unroll_data, unroll_labels # Returns the arrays
 
     def reset_indices(self):
         for i in range(self.batch_size):
