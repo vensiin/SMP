@@ -9,9 +9,12 @@ import urllib.request, json # Imports urllib.request (for making web requests, l
 import os # Lets you interact with the operating system (like checking if a file exists). https://docs.python.org/3/library/urllib.request.html#module-urllib.request
 import numpy as np # A math library for arrays, vectors, and numerical computing.
 import tensorflow as tf # Imports TensorFlow, a machine learning library.
+import keras
+from keras import layers
+from keras.layers import LSTM, Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
-from tensorflow.python.keras.legacy_tf_layers.core import dropout
 from dataGenerator import *
+from create_lstm_model import *
 import os
 from dotenv import load_dotenv
 
@@ -257,7 +260,7 @@ for pred_idx in range(1,N):
 # print(f"ema avg pred: {ema_avg_predictions}")
 print(f"MSE for EMA: {0.5 * np.mean(ema_mse_errors):.5f}")
 
-
+# Graphs EMA
 fig, ax = plt.subplots(figsize=(25,16))
 ax.plot(range(df.shape[0]), all_mid_data, color = 'orchid', label = "True")
 ax.plot(range(0, N), ema_avg_predictions, color = 'gold', label = "Predictions")
@@ -281,18 +284,38 @@ for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate bas
     print(f"tOutputs: {label}\n")
 
 
+
 D = 1 # Dimensionality. Only viewing one thing price.
 num_unrollings = 50 # How many time steps we are looking back
 batch_size = 500 # 500 Sequences
 num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
 n_layers = len(num_nodes)
 dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
-tf.compat.v1.reset_default_graph() # Clears any previous TF models from memory
 train_i, train_o = [], []
 
-# This creates empty placeholders to feed the data from the dataGenerator into the placeholders
-for ui in range(num_unrollings):
-    train_i.append(tf.compat.v1.placeholder(tf.float32, [batch_size, D], name = f"Train inputs: {ui}"))
-    train_o.append(tf.compat.v1.placeholder(tf.float32, [batch_size, 1], name = f"Train outputs: {ui}"))
+model = create_lstm_model(num_nodes, dropout_rate, num_unrollings)
+model.summary()
 
-lstm_cells = [keras.layers.LSTM]
+# 2. Compile model
+model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.001),
+    loss='mse',  # Mean squared error for regression
+    metrics=['mae']  # Mean absolute error
+)
+
+# X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
+# y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
+
+
+# # 4. Train!
+# history = model.fit(
+#     X_train,
+#     y_train,
+#     epochs=10,
+#     batch_size=32,
+#     validation_split=0.2
+# )
+#
+# # 5. Predict
+# predictions = model.predict()
+
