@@ -272,7 +272,15 @@ ax.legend(fontsize = 20, loc = 'upper left')
 ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize = 25)
 plt.show()
 
-dg = DataGenerator(train_data, 5, 5)
+D = 1 # Dimensionality. Only viewing one thing price.
+num_unrollings = 50 # How many time steps we are looking back
+batch_size = 500 # 500 Sequences
+num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
+n_layers = len(num_nodes)
+dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
+train_i, train_o = [], []
+
+dg = DataGenerator(train_data, batch_size=batch_size, num_unroll=num_unrollings)
 u_data, u_labels = dg.unroll_batches() # Stores the arrays of data & labels from the function
 
 # For loop iterating through both the index with data & labels
@@ -284,15 +292,6 @@ for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate bas
     print(f"tOutputs: {label}\n")
 
 
-
-D = 1 # Dimensionality. Only viewing one thing price.
-num_unrollings = 50 # How many time steps we are looking back
-batch_size = 500 # 500 Sequences
-num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
-n_layers = len(num_nodes)
-dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
-train_i, train_o = [], []
-
 model = create_lstm_model(num_nodes, dropout_rate, num_unrollings)
 model.summary()
 
@@ -303,19 +302,19 @@ model.compile(
     metrics=['mae']  # Mean absolute error
 )
 
-# X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
-# y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
+y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
 
 
-# # 4. Train!
-# history = model.fit(
-#     X_train,
-#     y_train,
-#     epochs=10,
-#     batch_size=32,
-#     validation_split=0.2
-# )
-#
-# # 5. Predict
-# predictions = model.predict()
+# 4. Train!
+history = model.fit(
+    X_train,
+    y_train,
+    epochs=10,
+    batch_size=32,
+    validation_split=0.2
+)
+
+# 5. Predict
+predictions = model.predict()
 
