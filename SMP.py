@@ -316,5 +316,16 @@ history = model.fit(
 )
 
 # 5. Predict
-predictions = model.predict()
+predictions = model.predict(X_train) # Generates output predictions for the input samples
+print(X_train.shape)
+actual = y_train[:, -1, :] # Actual Values
 
+
+plt.figure(figsize=(12, 6))
+plt.plot(actual[:100], label='Actual', marker='o')
+plt.plot(predictions[:100], label='Predicted', marker='x')
+plt.legend()
+plt.title('Stock Price Predictions vs Actual')
+plt.xlabel('Sample')
+plt.ylabel('Price')
+plt.show()
