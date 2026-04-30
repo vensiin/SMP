@@ -15,6 +15,7 @@ from keras.layers import LSTM, Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
 from dataGenerator import *
 from create_lstm_model import *
+from LRS import *
 import os
 from dotenv import load_dotenv
 
@@ -329,3 +330,18 @@ plt.title('Stock Price Predictions vs Actual')
 plt.xlabel('Sample')
 plt.ylabel('Price')
 plt.show()
+
+initial_lr = 0.001
+min_lr = .00001
+
+lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+    initial_learning_rate=initial_lr,
+    decay_steps=1, # Decays every step
+    decay_rate=0.5, # Decay rate
+    staircase=True,
+)
+
+lr_w_min = LearningRateScheduler(lr_schedule, min_lr)
+
+optimizer = keras.optimizers.Adam(learning_rate=lr_w_min,
+                                  clipnorm=5.0,)
