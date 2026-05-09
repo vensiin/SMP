@@ -1,7 +1,8 @@
 import tensorflow as tf
-from tensorflow import keras
+import keras
 
-class LearningRateScheduler:
+
+class LearningRateScheduler(keras.optimizers.schedules.LearningRateSchedule):
     def __init__(self, schedule, min_lr):
         self.schedule = schedule
         self.min_lr = min_lr

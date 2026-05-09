@@ -293,26 +293,27 @@ for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate bas
     print(f"tOutputs: {label}\n")
 
 
-model = create_lstm_model(num_nodes, dropout_rate, num_unrollings)
-model.summary()
 
-# 2. Compile model
+model = create_lstm_model(num_nodes, dropout_rate, num_unrollings) # Creates LSTM Model
+model.summary() # Outputs a summary of the model
+
+# Configurations to train the model
 model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.001),
+    optimizer=keras.optimizers.Adam(learning_rate=0.001), # Implements the adam algorithm for training
     loss='mse',  # Mean squared error for regression
     metrics=['mae']  # Mean absolute error
 )
 
-X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D) # Resha
 y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
 
 
-# 4. Train!
+# How the model gets trained
 history = model.fit(
-    X_train,
-    y_train,
-    epochs=10,
-    batch_size=32,
+    X_train, # Training data
+    y_train, # Target data/ Actual values
+    epochs=10, # Number of epochs
+    batch_size=32, # Default batch size
     validation_split=0.2
 )
 
@@ -331,17 +332,134 @@ plt.xlabel('Sample')
 plt.ylabel('Price')
 plt.show()
 
-initial_lr = 0.001
-min_lr = .00001
 
-lr_schedule = keras.optimizers.schedules.ExponentialDecay(
-    initial_learning_rate=initial_lr,
-    decay_steps=1, # Decays every step
-    decay_rate=0.5, # Decay rate
-    staircase=True,
+# Hyperparameters
+initial_learning_rate = 0.001
+min_learning_rate = 0.00001
+num_epochs = 50
+train_batch_size = 32
+
+# Learning rate decay callback
+def lr_decay_schedule(epoch, lr):
+    """
+    Exponential decay: lr = initial_lr * 0.5^epoch
+    But never below min_learning_rate
+    """
+    new_lr = initial_learning_rate * (0.5 ** epoch)
+    return max(new_lr, min_learning_rate)
+
+lr_callback = keras.callbacks.LearningRateScheduler(lr_decay_schedule, verbose=1)
+
+# Early stopping to prevent overfitting
+early_stop = keras.callbacks.EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True
 )
 
-lr_w_min = LearningRateScheduler(lr_schedule, min_lr)
+# Model checkpoint to save best model
+checkpoint = keras.callbacks.ModelCheckpoint(
+    'best_lstm_model.keras',
+    monitor='val_loss',
+    save_best_only=True,
+    verbose=1
+)
 
-optimizer = keras.optimizers.Adam(learning_rate=lr_w_min,
-                                  clipnorm=5.0,)
+model2 = create_lstm_model(num_nodes, dropout_rate, num_unrollings)
+
+optimizer = keras.optimizers.Adam(
+    learning_rate=initial_learning_rate,
+    clipnorm=5.0  # Gradient clipping (prevents exploding gradients)
+)
+
+model2.compile(
+    optimizer=optimizer,
+    loss='mse',
+    metrics=['mae']
+)
+
+# Train with callbacks
+print("\n" + "="*50)
+print("Training LSTM Model")
+print("="*50)
+
+history2 = model.fit(
+    X_train,
+    y_train,  # Predict last time step
+    epochs=num_epochs,
+    batch_size=train_batch_size,
+    validation_split=0.2,
+    callbacks=[lr_callback, early_stop, checkpoint],
+    verbose=1
+)
+
+# Plot training history
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+
+# Loss plot
+ax1.plot(history2.history['loss'], label='Training Loss', marker='o')
+ax1.plot(history2.history['val_loss'], label='Validation Loss', marker='s')
+ax1.set_xlabel('Epoch', fontsize=12)
+ax1.set_ylabel('Loss (MSE)', fontsize=12)
+ax1.set_title('Training and Validation Loss', fontsize=14)
+ax1.legend()
+ax1.grid(True)
+ax1.set_yscale('log')  # Log scale for better visualization
+
+# Learning rate plot
+lr_values = [lr_decay_schedule(epoch, initial_learning_rate)
+             for epoch in range(len(history.history['loss']))]
+ax2.plot(lr_values, marker='o', color='orange')
+ax2.set_xlabel('Epoch', fontsize=12)
+ax2.set_ylabel('Learning Rate', fontsize=12)
+ax2.set_title('Learning Rate Decay', fontsize=14)
+ax2.grid(True)
+ax2.set_yscale('log')
+
+plt.tight_layout()
+plt.show()
+
+print(f"\nFinal training loss: {history.history['loss'][-1]:.6f}")
+print(f"Final validation loss: {history.history['val_loss'][-1]:.6f}")
+
+
+# initial_lr = 0.001
+# min_lr = .00001
+#
+# lr_schedule = keras.optimizers.schedules.ExponentialDecay(
+#     initial_learning_rate=initial_lr,
+#     decay_steps=1, # Decays every step
+#     decay_rate=0.5, # Decay rate
+#     staircase=True,
+# )
+#
+# lr_w_min = LearningRateScheduler(lr_schedule, min_lr)
+#
+# optimizer = keras.optimizers.Adam(learning_rate=lr_w_min,
+#                                   clipnorm=5.0,)
+#
+#
+# model.compile(
+#     optimizer=optimizer,
+#     loss='mse',
+#     metrics=['mae']
+# )
+#
+# # 4. Train!
+# history2 = model.fit(
+#     X_train,
+#     y_train,
+#     epochs=10,
+#     batch_size=32,
+#     validation_split=0.2
+# )
+#
+# plt.figure(figsize=(10, 6))
+# plt.plot(history2.history['loss'], label='Training Loss')
+# plt.plot(history2.history['val_loss'], label='Validation Loss')
+# plt.xlabel('Epoch')
+# plt.ylabel('Loss')
+# plt.legend()
+# plt.title('Training Progress')
+# plt.yscale('log')
+# plt.show()
