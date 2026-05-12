@@ -166,8 +166,9 @@ train_data[left_over:, :] = Scaler.transform(train_data[left_over:, :])
 # train_data[di:di + smoothing_wndw_size, :] = Scaler.transform(train_data[di:di + smoothing_wndw_size, :]) # Do the same for the last bit of data
 
 train_data = train_data.reshape(-1) # Reshapes the data back into an array
+print(f" Viewing what the train_data looks like: {train_data}")
 test_data = Scaler.transform(test_data).reshape(-1) # Reshape and transform the test data.  We only fit the training data on the training data because we don't want the test data to know the min/max which would
-                                                                                            # lead the machine to not actually learn.
+print(f" Viewing what the test_data looks like: {test_data}")
 
 # 5.Smoothing the training data using EMA. EMA is a way to make old data points weigh less than the new ones.
 
@@ -274,18 +275,17 @@ ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize 
 plt.show()
 
 D = 1 # Dimensionality. Only viewing one thing price.
-num_unrollings = 50 # How many time steps we are looking back
+num_unrollings = 50 # How many time steps we are looking back to predict the next value
 batch_size = 500 # 500 Sequences
 num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
 n_layers = len(num_nodes)
 dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
-train_i, train_o = [], []
 
 dg = DataGenerator(train_data, batch_size=batch_size, num_unroll=num_unrollings)
 u_data, u_labels = dg.unroll_batches() # Stores the arrays of data & labels from the function
 
 # For loop iterating through both the index with data & labels
-for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate basically create 2 tuples. One tuple with u_data & u_labels and another with an index with the tuple u_data & u_labels
+for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate basically create 2 tuples. Zip creates a tuple with u_data & u_labels and enumerate creates an index with the tuple u_data & u_labels
                                                          # EX. (0, ([10, 12, 14, 16], [11, 13, 16, 18])) is what it would look like
                                                          #    Index        Data             Label
     print(f"Unrolled index: {ui}")
@@ -304,7 +304,7 @@ model.compile(
     metrics=['mae']  # Mean absolute error
 )
 
-X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D) # Resha
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
 y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
 
 

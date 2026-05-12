@@ -1,7 +1,7 @@
 import numpy as np
 from tensorflow.python.ops.gen_batch_ops import batch
 
-
+# Used to assign the data for the tensorflow model can read & hold it
 class DataGenerator(object):
     def __init__(self, prices, batch_size, num_unroll):
         self.prices = prices # Stores our array of stock prices
@@ -21,7 +21,7 @@ class DataGenerator(object):
         Example: A = 0, B = 5, C = 10, D = 15
         At one time step, we take one value from each sequence. So it would be [0 5 10 15] (Batch_size = 4). Then the next time step would be [1, 6, 11, 16], however 0 -> 1 is a time step and 0 -> 5 is changing sequences.
                                                                                [1 6 11 16] easier to understand like this. Rows = time steps, columns = sequences.
-                                                                               [2 7 12 17] Each row is ONE time step, 📌 Each column is ONE sequence
+                                                                               [2 7 12 17] Each row is ONE time step, Each column is ONE sequence
                                                                                
         *prices_length = What we initialized our price to so it does not go down.
         For example:

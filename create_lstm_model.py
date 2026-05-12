@@ -4,11 +4,11 @@ from keras.layers import LSTM, Dropout, Dense
 
 
 
-
+# Creates LSTM model
 def create_lstm_model(num_nodes, dropout, unrollings):
-    model = keras.models.Sequential()
+    model = keras.models.Sequential() # The type of model. Groups a linear stack of layers onto the model
 
-    # First layer (200 neurons)
+    # Adds the LSTM first layer (200 neurons)
     model.add(LSTM(units=num_nodes[0], # Number of LSTM cells in each layer
                    dropout=dropout, # Dropout rate
                    return_sequences=True, # True means output each time step for stacking
