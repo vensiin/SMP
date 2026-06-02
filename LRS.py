@@ -1,13 +1,8 @@
 import tensorflow as tf
 import keras
 
-
-class LearningRateScheduler(keras.optimizers.schedules.LearningRateSchedule):
-    def __init__(self, schedule, min_lr):
-        self.schedule = schedule
-        self.min_lr = min_lr
-
-    # Call makes the entire class a function
-    def __call__(self, step):
-        lr = self.schedule(step)
-        return tf.maximum(lr, self.min_lr)
+def lr_decay_schedule(epoch, initial_lr, min_lr):
+    new_lr = initial_lr * (0.5 ** epoch)
+    final_lr = max(new_lr, min_lr)
+    print(f"Epoch {epoch + 1}: Learning rate is {final_lr}")
+    return final_lr

@@ -13,6 +13,8 @@ import keras
 from keras import layers
 from keras.layers import LSTM, Dense, Dropout
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
+
+import LRS
 from dataGenerator import *
 from create_lstm_model import *
 from LRS import *
@@ -297,49 +299,58 @@ for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate bas
 model = create_lstm_model(num_nodes, dropout_rate, num_unrollings) # Creates LSTM Model
 model.summary() # Outputs a summary of the model
 
-# Configurations to train the model
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=0.001), # Implements the adam algorithm for training
-    loss='mse',  # Mean squared error for regression
-    metrics=['mae']  # Mean absolute error
-)
-
-X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
-y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
-
-
-# How the model gets trained
-history = model.fit(
-    X_train, # Training data
-    y_train, # Target data/ Actual values
-    epochs=10, # Number of epochs
-    batch_size=32, # Default batch size
-    validation_split=0.2
-)
-
-# 5. Predict
-predictions = model.predict(X_train) # Generates output predictions for the input samples
-print(f"predictions: {predictions}")
-
-print(X_train.shape)
-actual = y_train[:, -1, :] # Actual Values
-print(f"actual values: {actual}")
-
-for i in zip(predictions, actual):
-    print(f" viewing: {i}")
-
-plt.figure(figsize=(12, 6))
-plt.plot(actual[:100], label='Actual', marker='o')
-plt.plot(predictions[:100], label='Predicted', marker='x')
-plt.legend()
-plt.title('Stock Price Predictions vs Actual')
-plt.xlabel('Sample')
-plt.ylabel('Price')
-plt.show()
-
-
 # Hyperparameters
 initial_learning_rate = 0.001
 min_learning_rate = 0.00001
 num_epochs = 50
 train_batch_size = 32
+
+lr_callback = keras.callbacks.LearningRateScheduler(LRS.lr_decay_schedule(num_epochs, initial_learning_rate, min_learning_rate), verbose=0)
+
+early_stop = keras.callbacks.EarlyStopping(
+    monitor='val_loss',
+    patience=5,
+    restore_best_weights=True,
+    verbose=1,
+)
+
+checkpoint = keras.callbacks.ModelCheckpoint(
+    "best_lstm_model.keras",
+    monitor='val_loss',
+    save_best_only=True,
+    verbose=1,
+)
+
+optimizer = keras.optimizers.Adam(learning_rate = initial_learning_rate,
+                                  clipnorm=5.0)
+
+# Configurations to train the mode
+model.compile(optimizer = optimizer,
+              loss = 'mse',
+              metrics = ['mae'])
+
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
+y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
+
+print(f"\nX_train shape: {X_train.shape}")  # (500, 50, 1)
+print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
+print(f"Training on LAST time step predictions only")
+
+
+# How the model gets trained
+history = model.fit(
+    X_train, # Training data
+    y_train[:, -1, :], # Target data/ Actual values
+    epochs=10, # Number of epochs
+    batch_size=32, # Default batch size
+    validation_split=0.2
+)
+
+print("\n" + "="*60)
+print("TRAINING COMPLETE")
+print("="*60)
+print(f"Final training loss: {history.history['loss'][-1]:.6f}")
+print(f"Final validation loss: {history.history['val_loss'][-1]:.6f}")
+print(f"Best validation loss: {min(history.history['val_loss']):.6f}")
+
+

@@ -2,3 +2,46 @@
 2. Currently using HPQ kaggle data, just to follow the guide but after we will attempt with more up to date data
 3. Value error when attempting to go through scale the elements in the hpq txt file
 4. Test_data is missing its values
+
+
+
+'Goes after model summary'
+# Configurations to train the model
+model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.001), # Implements the adam algorithm for training
+    loss='mse',  # Mean squared error for regression
+    metrics=['mae']  # Mean absolute error
+)
+
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
+y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
+
+
+# How the model gets trained
+history = model.fit(
+    X_train, # Training data
+    y_train[:, -1, :], # Target data/ Actual values
+    epochs=10, # Number of epochs
+    batch_size=32, # Default batch size
+    validation_split=0.2
+)
+
+# 5. Predict
+predictions = model.predict(X_train) # Generates output predictions for the input samples
+print(f"predictions: {predictions}")
+
+print(X_train.shape)
+actual = y_train[:, -1, :] # Actual Values
+print(f"actual values: {actual}")
+
+for i in zip(predictions, actual):
+    print(f"predictions vs actual values: {i}")
+
+plt.figure(figsize=(12, 6))
+plt.plot(actual[:100], label='Actual', marker='o')
+plt.plot(predictions[:100], label='Predicted', marker='x')
+plt.legend()
+plt.title('Stock Price Predictions vs Actual')
+plt.xlabel('Sample')
+plt.ylabel('Price')
+plt.show()
