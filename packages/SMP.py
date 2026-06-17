@@ -1,6 +1,7 @@
 import keras.layers
 from fontTools.misc.arrayTools import scaleRect
 from pandas.io.xml import preprocess_data # This is related to handling XML data with Pandas. https://pandas.pydata.org/docs/
+from pandas_datareader import data # This can fetch stock/financial data from sources like Yahoo, Google, etc. # https://pandas-datareader.readthedocs.io/en/latest/index.html
 import matplotlib.pyplot as plt # Lets you make charts and graphs. # https://matplotlib.org/stable/users/explain/quick_start.html#a-simple-example
 import pandas as pd # Pandas is used for data manipulation and analysis (working with tables).
 import datetime as dt # Lets you work with dates and times (e.g., parsing strings into dates). import datetime as dt # https://docs.python.org/3/library/datetime.html#
@@ -113,10 +114,10 @@ test_data = mid_prices[11000:]
 
 Scaler = MinMaxScaler() # Scaler to make all values between 0 and 1. The reason for this is to let the machine learn smoother and faster. (Formula: x-min/max-min)
 # 2513 rows, 1 column for this specific ticker
-train_data = train_data.values.reshape(-1, 1).copy() # After slicing the data, we now have a numpy array. We must reshape it into a 2d array. (11,000, 1) [[10],[20][30], etc.]. We do this because MinMaxScaler expects 2d arrays.
+train_data = train_data.values.reshape(-1, 1) # After slicing the data, we now have a numpy array. We must reshape it into a 2d array. (11,000, 1) [[10],[20][30], etc.]. We do this because MinMaxScaler expects 2d arrays.
 print(f"train data: {train_data}")
 # 2513 rows, 1 column for the last bit of this ticker
-test_data = test_data.values.reshape(-1, 1).copy() # After slicing the data, we now have a numpy array. We must reshape it into a 2d array. (11,000, 1) [[10],[20][30], etc.] Think of it vertically instead of horizontally. We do this because MinMaxScaler expects 2d arrays.
+test_data = test_data.values.reshape(-1, 1) # After slicing the data, we now have a numpy array. We must reshape it into a 2d array. (11,000, 1) [[10],[20][30], etc.] Think of it vertically instead of horizontally. We do this because MinMaxScaler expects 2d arrays.
 print(f"test data: {test_data}")
 
 # 4. Converting the training data into scaled ones
@@ -298,16 +299,14 @@ for ui,(data,label) in enumerate(zip(u_data, u_labels)): # Zip and enumerate bas
 model = create_lstm_model(num_nodes, dropout_rate, num_unrollings) # Creates LSTM Model
 model.summary() # Outputs a summary of the model
 
-# Hyperparameters for callback function
+# Hyperparameters
 initial_learning_rate = 0.001
 min_learning_rate = 0.00001
 num_epochs = 50
 train_batch_size = 32
 
-# Used to update the models learning rate. Takes in a function that returns the updated learning rate
 lr_callback = keras.callbacks.LearningRateScheduler(LRS.lr_decay_schedule(num_epochs, initial_learning_rate, min_learning_rate), verbose=0)
 
-# Monitors the training and stops when monitored metric stops progressing
 early_stop = keras.callbacks.EarlyStopping(
     monitor='val_loss',
     patience=5,
@@ -315,7 +314,6 @@ early_stop = keras.callbacks.EarlyStopping(
     verbose=1,
 )
 
-# Saves the best epoch model
 checkpoint = keras.callbacks.ModelCheckpoint(
     "best_lstm_model.keras",
     monitor='val_loss',
@@ -339,20 +337,14 @@ print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
 print(f"Training on LAST time step predictions only")
 
 
-# How the model gets trained. Returns a history object with an attribute named history to view a report
+# How the model gets trained
 history = model.fit(
     X_train, # Training data
     y_train[:, -1, :], # Target data/ Actual values
-    epochs=num_epochs, # Number of epochs
-    batch_size=train_batch_size, # Default batch size
-    validation_split=0.2,
-    callbacks=[lr_callback, early_stop, checkpoint],
-    verbose=1
+    epochs=10, # Number of epochs
+    batch_size=32, # Default batch size
+    validation_split=0.2
 )
-
-# best_model = keras.models.load_model("best_lstm_model.keras")
-# best_model = keras.models.load_model("best_lstm_model.keras")
-
 
 print("\n" + "="*60)
 print("TRAINING COMPLETE")
@@ -360,103 +352,5 @@ print("="*60)
 print(f"Final training loss: {history.history['loss'][-1]:.6f}")
 print(f"Final validation loss: {history.history['val_loss'][-1]:.6f}")
 print(f"Best validation loss: {min(history.history['val_loss']):.6f}")
-
-#  Visual Training History
-
-fig, axes = plt.subplots(1, 3, figsize=(20,5))
-# 1: Loss
-axes[0].plot(history.history["loss"], label = "Training Loss", marker="o", linewidth=2)
-axes[0].plot(history.history["val_loss"], label = "Validation Loss", marker="s", linewidth=2)
-axes[0].set_xlabel("Epoch", fontsize = 12)
-axes[0].set_ylabel("Loss (MSE)", fontsize = 12)
-axes[0].set_title("Training & Validation loss", fontsize = 14, fontweight="bold")
-axes[0].legend(fontsize = 11)
-axes[0].grid(True, alpha = .3)
-axes[0].set_yscale("log")
-
-# 2: MAE
-axes[1].plot(history.history["mae"], label = "Training MAE", marker="o", linewidth=2)
-axes[1].plot(history.history["val_mae"], label = "Validation MAE", marker="s", linewidth=2)
-axes[1].set_xlabel("Epoch", fontsize = 12)
-axes[1].set_ylabel("Mean Absolute Error", fontsize = 12)
-axes[1].set_title("Training & Validation MAE", fontsize = 14, fontweight="bold")
-axes[1].legend(fontsize = 11)
-axes[1].grid(True, alpha = .3)
-
-
-# 3: Learning Rate
-
-lr_values = [lr_decay_schedule(num_epochs, initial_learning_rate, min_learning_rate)
-             for epoch in range(len(history.history["loss"]))]
-axes[2].plot(lr_values, marker = "o", color="orange", linewidth=2)
-# 2: MAE
-axes[2].set_xlabel("Epoch", fontsize = 12)
-axes[2].set_ylabel("Learning Rate ", fontsize = 12)
-axes[2].set_title("LR Schedule", fontsize = 14, fontweight="bold")
-axes[2].legend(fontsize = 11)
-axes[2].grid(True, alpha = .3)
-
-plt.tight_layout()
-plt.show()
-
-# Making Predictions
-
-print("\n" + "="*60)
-print("GENERATING PREDICTIONS")
-print("="*60)
-
-predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions   
-actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
-print(f"Predictions shape: {predictions.shape}")  # (500, 1)
-print(f"Actual values shape: {actual.shape}")     # (500, 1)
-
-mse = np.mean((predictions - actual) ** 2) # Mean Standard Error
-mae = np.mean(np.abs(predictions - actual) ** 2) # Mean Absolute Error
-
-for i in range(10):
-    pred_val = predictions[i, 0]
-    actual_val = actual[i, 0]
-    error = pred_val - actual_val
-    print(f"{i:<10}{pred_val:<15.6f}{actual_val:<15.6f}{error:<15.6f}")
-
-# Visualizing predictions
-
-plt.figure(figsize=(12, 6))
-plt.plot(actual[:100], label='Actual', marker='o')
-plt.plot(predictions[:100], label='Predicted', marker='x')
-plt.legend()
-plt.title('Stock Price Predictions vs Actual')
-plt.xlabel('Sample')
-plt.ylabel('Price')
-plt.show()
-
-fig, axes = plt.subplots(2, 1, figsize=(15, 10))
-
-# Plot 1: First 100 predictions
-axes[0].plot(actual[:100], label='Actual', marker='o', linewidth=2, markersize=4, alpha=0.7)
-axes[0].plot(predictions[:100], label='Predicted', marker='x', linewidth=2, markersize=4, alpha=0.7)
-axes[0].set_xlabel('Sample Index', fontsize=12)
-axes[0].set_ylabel('Normalized Price', fontsize=12)
-axes[0].set_title('LSTM Predictions vs Actual (First 100 Samples)', fontsize=14, fontweight='bold')
-axes[0].legend(fontsize=11)
-axes[0].grid(True, alpha=0.3)
-
-# Plot 2: Scatter plot of predictions vs actual
-axes[1].scatter(actual, predictions, alpha=0.5, s=20)
-axes[1].plot([actual.min(), actual.max()],
-             [actual.min(), actual.max()],
-             'r--', linewidth=2, label='Perfect Prediction')
-axes[1].set_xlabel('Actual Values', fontsize=12)
-axes[1].set_ylabel('Predicted Values', fontsize=12)
-axes[1].set_title('Prediction Accuracy Scatter Plot', fontsize=14, fontweight='bold')
-axes[1].legend(fontsize=11)
-axes[1].grid(True, alpha=0.3)
-
-plt.tight_layout()
-plt.show()
-
-print("\n" + "="*60)
-print("ALL DONE!")
-print("="*60)
 
 

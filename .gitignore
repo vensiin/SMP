@@ -1,3 +1,4 @@
 API-KEY*
 .venv/
+.venv2/
 .env
