@@ -19,7 +19,7 @@ class DataGenerator(object):
         
         batch_size = We create 4 Separate sequences: A,B,C,D. Each sequence is a pointer into the data set.
         Example: A = 0, B = 5, C = 10, D = 15
-        At one time step, we take one value from each sequence. So it would be [0 5 10 15] (Batch_size = 4). Then the next time step would be [1, 6, 11, 16], however 0 -> 1 is a time step and 0 -> 5 is changing sequences.
+        At one time step, we take one value from each sequence. So it would be [0 5 10 15] (Batch_size = 4). Then the next sequence would be [1, 6, 11, 16], however 0 -> 1 is a time step and 0 -> 5 is changing sequences.
                                                                                [1 6 11 16] easier to understand like this. Rows = time steps, columns = sequences.
                                                                                [2 7 12 17] Each row is ONE time step, Each column is ONE sequence
                                                                                

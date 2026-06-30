@@ -95,7 +95,7 @@ print(f"high prices: \n{high_prices}")
 low_prices.to_numpy() # as_matrix() and .values() does not work anymore. Modern way is to_numpy()
 print(f"low prices: \n{low_prices}")
 
-mid_prices = (high_prices + low_prices) / 2.0
+mid_prices = (high_prices + low_prices) / 2.0 # Used because we need the average of both to give us a good estimate on our predictions
 elements_of_mp = mid_prices.shape # Tuple
 size_of_mp = int(elements_of_mp[0]) # Integer
 print(f"size_of_mp divided by 2: {size_of_mp // 2}")
@@ -137,7 +137,7 @@ for di in range(di, 10000, smoothing_wndw_size):
     If we scale all at once, we'll get [0.0, 0.006, 0.011, 0.85, 0.91, 1.0]. All the early values are negligible and hold no weight.
     When we scale the values, now all the prices hold some form of weight which could influence the training.
 
-     Simple analogy:
+    Simple analogy:
     Imagine you’re tracking a kid’s growth:
     At age 5: height changes from 3’0 → 3’5
     At age 15: height changes from 5’0 → 5’5
@@ -167,9 +167,9 @@ train_data[left_over:, :] = Scaler.transform(train_data[left_over:, :])
 # train_data[di:di + smoothing_wndw_size, :] = Scaler.transform(train_data[di:di + smoothing_wndw_size, :]) # Do the same for the last bit of data
 
 train_data = train_data.reshape(-1) # Reshapes the data back into an array
-print(f" Viewing what the train_data looks like: {train_data}")
+print(f"Viewing what the train_data looks like: {train_data}")
 test_data = Scaler.transform(test_data).reshape(-1) # Reshape and transform the test data.  We only fit the training data on the training data because we don't want the test data to know the min/max which would
-print(f" Viewing what the test_data looks like: {test_data}")
+print(f"Viewing what the test_data looks like: {test_data}")
 
 # 5.Smoothing the training data using EMA. EMA is a way to make old data points weigh less than the new ones.
 
@@ -304,38 +304,58 @@ min_learning_rate = 0.00001
 num_epochs = 50
 train_batch_size = 32
 
-# Used to update the models learning rate. Takes in a function that returns the updated learning rate
-lr_callback = keras.callbacks.LearningRateScheduler(LRS.lr_decay_schedule(num_epochs, initial_learning_rate, min_learning_rate), verbose=0)
+# Assign the wrapper function to a variable
+# lr_function = LRS.wrapper(initial_learning_rate,min_learning_rate)
 
+# Used to update the models learning rate. Takes in a callable function that returns the updated learning rate
+# lr_callback = keras.callbacks.LearningRateScheduler(lr_function, verbose=0) # During training (.fit), the epoch argument will be automatically fulfilled by keras
+
+# In your main code, replace the lr_callback line with. Works the same way as the function method. Takes epoch as an argument and will be filled by keras
+lr_callback = keras.callbacks.LearningRateScheduler(
+    lambda epoch: max(
+        initial_learning_rate * (0.5 ** epoch), # Calculated decayed learning rate
+        min_learning_rate
+    ),
+    verbose=0
+)
+
+'''
+In the beginning of the training, provided your model has enough capacity (if it doesn't, that's another problem),
+both training loss and validation loss will decrease as epochs occur.
+After some time, the validation loss will stop decreasing and will start increasing,
+while the training loss continues to decrease forever (by definition, because that's what you are optimizing for).
+That's exactly the point when you must STOP the training - at that moment the model started overfitting.
+'''
 # Monitors the training and stops when monitored metric stops progressing
 early_stop = keras.callbacks.EarlyStopping(
-    monitor='val_loss',
+    monitor='val_loss', # Watches the validation loss to prevent overfitting
     patience=5,
-    restore_best_weights=True,
+    restore_best_weights=True, # Uses the best weights from the best epoch model
     verbose=1,
 )
 
 # Saves the best epoch model
 checkpoint = keras.callbacks.ModelCheckpoint(
-    "best_lstm_model.keras",
-    monitor='val_loss',
+    "best_lstm_model.keras", # Saves the best model during each epoch
+    monitor='val_loss', # Watches the validation loss to prevent overfitting
     save_best_only=True,
     verbose=1,
 )
 
-optimizer = keras.optimizers.Adam(learning_rate = initial_learning_rate,
+# Used to update the loss / prediction error
+optimizer = keras.optimizers.Adam(learning_rate = initial_learning_rate,# Default learning rate
                                   clipnorm=5.0)
 
 # Configurations to train the mode
 model.compile(optimizer = optimizer,
-              loss = 'mse',
-              metrics = ['mae'])
+              loss = 'mse', # Using the mse as the loss function
+              metrics = ['mae']) # Calculates the MAE to view. Whatever metrics we want to be viewed must be included or keras won't include it as a key
 
-X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D)
-y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1)
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D) # Training data. Reformatted into ?
+y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1) # Testing data. Reformatted into ?
 
-print(f"\nX_train shape: {X_train.shape}")  # (500, 50, 1)
-print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
+# print(f"\nX_train shape: {X_train.shape}")  # (500, 50, 1)
+# print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
 print(f"Training on LAST time step predictions only")
 
 
@@ -345,10 +365,12 @@ history = model.fit(
     y_train[:, -1, :], # Target data/ Actual values
     epochs=num_epochs, # Number of epochs
     batch_size=train_batch_size, # Default batch size
-    validation_split=0.2,
-    callbacks=[lr_callback, early_stop, checkpoint],
+    validation_split=0.2, # Splits the data up into 80% training and 20% test. Uses the algorithm from the 80%. Prevents overfitting (Memorizing instead of learning)
+    callbacks=[lr_callback, early_stop, checkpoint], # Automatically calls lr_callback(lr_decay_schedule(epoch)), early_stop, and, checkpoint
     verbose=1
 )
+
+print(f"available metrics to be viewed: {history.history.keys()}")
 
 # best_model = keras.models.load_model("best_lstm_model.keras")
 # best_model = keras.models.load_model("best_lstm_model.keras")
@@ -357,16 +379,18 @@ history = model.fit(
 print("\n" + "="*60)
 print("TRAINING COMPLETE")
 print("="*60)
-print(f"Final training loss: {history.history['loss'][-1]:.6f}")
+print(f"Final training loss: {history.history['loss'][-1]:.6f}") # Outputs the final MSE/Loss
+print(f"Best training loss: {min(history.history['loss']):.6f}") # Outputs the best MSE/Loss
 print(f"Final validation loss: {history.history['val_loss'][-1]:.6f}")
 print(f"Best validation loss: {min(history.history['val_loss']):.6f}")
+
 
 #  Visual Training History
 
 fig, axes = plt.subplots(1, 3, figsize=(20,5))
-# 1: Loss
-axes[0].plot(history.history["loss"], label = "Training Loss", marker="o", linewidth=2)
-axes[0].plot(history.history["val_loss"], label = "Validation Loss", marker="s", linewidth=2)
+# 1.1: MSE/Loss
+axes[0].plot(history.history["loss"], label = "Training Loss", marker="o", linewidth=2) # Graphs the MSE/Loss on the first diagram. How the model is learning
+axes[0].plot(history.history["val_loss"], label = "Validation Loss", marker="s", linewidth=2) # Graphs the validation loss. How the model is predicting on the validation based on the previous data it was trained on.
 axes[0].set_xlabel("Epoch", fontsize = 12)
 axes[0].set_ylabel("Loss (MSE)", fontsize = 12)
 axes[0].set_title("Training & Validation loss", fontsize = 14, fontweight="bold")
@@ -374,7 +398,7 @@ axes[0].legend(fontsize = 11)
 axes[0].grid(True, alpha = .3)
 axes[0].set_yscale("log")
 
-# 2: MAE
+# 1.2: MAE
 axes[1].plot(history.history["mae"], label = "Training MAE", marker="o", linewidth=2)
 axes[1].plot(history.history["val_mae"], label = "Validation MAE", marker="s", linewidth=2)
 axes[1].set_xlabel("Epoch", fontsize = 12)
@@ -384,11 +408,20 @@ axes[1].legend(fontsize = 11)
 axes[1].grid(True, alpha = .3)
 
 
-# 3: Learning Rate
+# 1.3: Learning Rate
 
-lr_values = [lr_decay_schedule(num_epochs, initial_learning_rate, min_learning_rate)
-             for epoch in range(len(history.history["loss"]))]
-axes[2].plot(lr_values, marker = "o", color="orange", linewidth=2)
+# Function method
+# lr_values = [lr_function(num_epochs)
+#              for epoch in range(len(history.history["loss"]))]
+# # axes[2].plot(lr_values, marker = "o", color="orange", linewidth=2)
+
+# lambda method
+# lr_values = [max((initial_learning_rate * (0.5 ** epoch)), min_learning_rate)
+#              for epoch in range(len(history.history["loss"]))] # Creates the learning rate manually
+# axes[2].plot(lr_values, marker = "o", color="orange", linewidth=2)
+
+axes[2].plot((history.history["learning_rate"]), marker = "o", color="orange", linewidth=2) # Graphs the learning rate automatically using the history learning_rate metric
+
 # 2: MAE
 axes[2].set_xlabel("Epoch", fontsize = 12)
 axes[2].set_ylabel("Learning Rate ", fontsize = 12)
@@ -407,23 +440,28 @@ print("="*60)
 
 predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions   
 actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
-print(f"Predictions shape: {predictions.shape}")  # (500, 1)
-print(f"Actual values shape: {actual.shape}")     # (500, 1)
+print(f"Min actual Value: {actual.min()}") # Min val in actual values array
+print(f"Max actual Value: {actual.max()}") # Min val in actual values array
+print(f"MSE: {np.mean((predictions - actual) ** 2)}")
+print(f"MAE: {np.mean(np.abs(predictions - actual) ** 2)}")
+# print(f"Predictions shape: {predictions.shape}")  # (500, 1)
+# print(f"Actual values shape: {actual.shape}")     # (500, 1)
 
-mse = np.mean((predictions - actual) ** 2) # Mean Standard Error
-mae = np.mean(np.abs(predictions - actual) ** 2) # Mean Absolute Error
+# mse = np.mean((predictions - actual) ** 2) # Mean Standard Error
+# mae = np.mean(np.abs(predictions - actual) ** 2) # Mean Absolute Error
 
+# outputs the first 10 index, prediction, actual, and the error
 for i in range(10):
     pred_val = predictions[i, 0]
     actual_val = actual[i, 0]
     error = pred_val - actual_val
-    print(f"{i:<10}{pred_val:<15.6f}{actual_val:<15.6f}{error:<15.6f}")
+    print(f"Index: {i:<10} Prediction: {pred_val:<15.6f} Actual: {actual_val:<15.6f} Error: {error:<15.6f}")
 
-# Visualizing predictions
+# Visualizing first 100 predictions
 
 plt.figure(figsize=(12, 6))
-plt.plot(actual[:100], label='Actual', marker='o')
-plt.plot(predictions[:100], label='Predicted', marker='x')
+plt.plot(actual[:100], label='Actual', marker='o') # Plots the first 100 values from the actual data set
+plt.plot(predictions[:100], label='Predicted', marker='x') # Plots the first 100 values from the prediction data set
 plt.legend()
 plt.title('Stock Price Predictions vs Actual')
 plt.xlabel('Sample')
@@ -433,16 +471,17 @@ plt.show()
 fig, axes = plt.subplots(2, 1, figsize=(15, 10))
 
 # Plot 1: First 100 predictions
-axes[0].plot(actual[:100], label='Actual', marker='o', linewidth=2, markersize=4, alpha=0.7)
-axes[0].plot(predictions[:100], label='Predicted', marker='x', linewidth=2, markersize=4, alpha=0.7)
+axes[0].plot(actual[:100], label='Actual', marker='o', linewidth=2, markersize=4, alpha=0.7) # Plots the first 100 actual values. The y-axis is handled by matplot
+axes[0].plot(predictions[:100], label='Predicted', marker='x', linewidth=2, markersize=4, alpha=0.7) # Plots the first 100 predictions. The y-axis is handled by matplot
 axes[0].set_xlabel('Sample Index', fontsize=12)
 axes[0].set_ylabel('Normalized Price', fontsize=12)
-axes[0].set_title('LSTM Predictions vs Actual (First 100 Samples)', fontsize=14, fontweight='bold')
+axes[0].set_title('LSTM Predictions vs Actual (First 100 Samples) lambda method', fontsize=14, fontweight='bold')
 axes[0].legend(fontsize=11)
 axes[0].grid(True, alpha=0.3)
 
 # Plot 2: Scatter plot of predictions vs actual
-axes[1].scatter(actual, predictions, alpha=0.5, s=20)
+axes[1].scatter(actual, predictions, alpha=0.5, s=20) # Scatter plots the actual as x and pred as y
+# Creates the dotted dash line to represent the accuracy of the predictions
 axes[1].plot([actual.min(), actual.max()],
              [actual.min(), actual.max()],
              'r--', linewidth=2, label='Perfect Prediction')
