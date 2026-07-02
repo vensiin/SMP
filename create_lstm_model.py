@@ -1,7 +1,7 @@
 import tensorflow as tf
 import keras
 from keras.layers import LSTM, Dropout, Dense
-
+from tensorflow.python.keras import activations
 
 
 # Creates LSTM model
@@ -10,7 +10,6 @@ def create_lstm_model(num_nodes, dropout, unrollings):
 
     # Adds the LSTM first layer (200 neurons)
     model.add(LSTM(units=num_nodes[0], # Number of LSTM cells in each layer
-                   dropout=dropout, # Dropout rate
                    return_sequences=True, # True means output each time step for stacking
                    input_shape =(unrollings, 1),
                    kernel_initializer='glorot_uniform',)) # Initializes weights
@@ -28,9 +27,10 @@ def create_lstm_model(num_nodes, dropout, unrollings):
                    , kernel_initializer='glorot_uniform')) # Initializes weights
     model.add(Dropout(dropout))
 
+    # Hidden layer. The part that does the calculations
     model.add(Dense(units=1,
                     kernel_initializer='glorot_uniform', # Initializes weights
-                    bias_initializer=keras.initializers.RandomUniform(-0.1, 0.1)
+                    bias_initializer=keras.initializers.RandomUniform(-0.1, 0.1),
                     ))
 
     return model

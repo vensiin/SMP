@@ -4,7 +4,7 @@ import numpy as np
 #
 # fig = plt.figure()             # an empty figure with no Axes
 fig, ax = plt.subplots()       # a figure with a single Axes
-ax.plot([1, 2, 3, 4], [1, 4, 2, 3])
+ax.plot([1, 2, 3, 4]) # This will plot them on the y-axis but will auto generate the x-axis using the min & max values (0-3)
 # fig, axs = plt.subplots(2, 2)  # a figure with a 2x2 grid of Axes
 # # a figure with one Axes on the left, and two on the right:
 # fig, axs = plt.subplot_mosaic([['left', 'right_top'],

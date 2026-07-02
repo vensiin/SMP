@@ -277,7 +277,7 @@ plt.show()
 
 D = 1 # Dimensionality. Only viewing one thing price.
 num_unrollings = 50 # How many time steps we are looking back to predict the next value
-batch_size = 500 # 500 Sequences
+batch_size = 500 # 500 Sequences (Samples)
 num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
 n_layers = len(num_nodes)
 dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
@@ -342,7 +342,7 @@ checkpoint = keras.callbacks.ModelCheckpoint(
     verbose=1,
 )
 
-# Used to update the loss / prediction error
+# Used to update the loss / prediction error. Used an advanced SGD algorithm
 optimizer = keras.optimizers.Adam(learning_rate = initial_learning_rate,# Default learning rate
                                   clipnorm=5.0)
 
@@ -351,10 +351,10 @@ model.compile(optimizer = optimizer,
               loss = 'mse', # Using the mse as the loss function
               metrics = ['mae']) # Calculates the MAE to view. Whatever metrics we want to be viewed must be included or keras won't include it as a key
 
-X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D) # Training data. Reformatted into ?
-y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1) # Testing data. Reformatted into ?
+X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D) # Training data. Reformatted into (500, 50, 1) 500 samples, 50 unrollings, 1 feature being looked at
+y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1) # Testing data. Reformatted into (500, 50, 1) 500 samples, 50 unrollings, 1 feature being looked at
 
-# print(f"\nX_train shape: {X_train.shape}")  # (500, 50, 1)
+# print(f"\nX_train shape: {X_train.shape}")  # (500, 50, 1) 500 samples (sequences), each example takes 50 days of history, with 1 feature being looked at
 # print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
 print(f"Training on LAST time step predictions only")
 
@@ -365,7 +365,7 @@ history = model.fit(
     y_train[:, -1, :], # Target data/ Actual values
     epochs=num_epochs, # Number of epochs
     batch_size=train_batch_size, # Default batch size
-    validation_split=0.2, # Splits the data up into 80% training and 20% test. Uses the algorithm from the 80%. Prevents overfitting (Memorizing instead of learning)
+    validation_split=0.2, # Sets aside 20% of the data to be used for validation. Uses the weights & bias from the 80% and uses it on the other 20% of the set aside data. Prevents overfitting (Memorizing instead of learning)
     callbacks=[lr_callback, early_stop, checkpoint], # Automatically calls lr_callback(lr_decay_schedule(epoch)), early_stop, and, checkpoint
     verbose=1
 )
@@ -390,7 +390,7 @@ print(f"Best validation loss: {min(history.history['val_loss']):.6f}")
 fig, axes = plt.subplots(1, 3, figsize=(20,5))
 # 1.1: MSE/Loss
 axes[0].plot(history.history["loss"], label = "Training Loss", marker="o", linewidth=2) # Graphs the MSE/Loss on the first diagram. How the model is learning
-axes[0].plot(history.history["val_loss"], label = "Validation Loss", marker="s", linewidth=2) # Graphs the validation loss. How the model is predicting on the validation based on the previous data it was trained on.
+axes[0].plot(history.history["val_loss"], label = "Validation Loss", marker="s", linewidth=2) # Graphs the validation loss. How the model is predicting on the validation set based on the previous data it was trained on.
 axes[0].set_xlabel("Epoch", fontsize = 12)
 axes[0].set_ylabel("Loss (MSE)", fontsize = 12)
 axes[0].set_title("Training & Validation loss", fontsize = 14, fontweight="bold")
@@ -399,7 +399,7 @@ axes[0].grid(True, alpha = .3)
 axes[0].set_yscale("log")
 
 # 1.2: MAE
-axes[1].plot(history.history["mae"], label = "Training MAE", marker="o", linewidth=2)
+axes[1].plot(history.history["mae"], label = "Training MAE", marker="o", linewidth=2) # Graphs the MAE
 axes[1].plot(history.history["val_mae"], label = "Validation MAE", marker="s", linewidth=2)
 axes[1].set_xlabel("Epoch", fontsize = 12)
 axes[1].set_ylabel("Mean Absolute Error", fontsize = 12)
@@ -440,6 +440,7 @@ print("="*60)
 
 predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions   
 actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
+print(f"shape of predictions: {predictions.shape}")
 print(f"Min actual Value: {actual.min()}") # Min val in actual values array
 print(f"Max actual Value: {actual.max()}") # Min val in actual values array
 print(f"MSE: {np.mean((predictions - actual) ** 2)}")
