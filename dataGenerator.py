@@ -29,7 +29,7 @@ class DataGenerator(object):
         *prices_length = What we initialized our price to so it does not go down.
         For example:
         my_arr = [1 2 3 4 5]
-        *num_unrolling = 3 (we need this because this is how many values we are going to be time stepping at once)
+        *num_unrolling = 3 (we need this because this is how many values we are going to be time stepping at once) essentially they are clues the model uses to predict
         i = 2(the element 3 in the array)
         If we try unrolling, we will get an out of bounds error
         

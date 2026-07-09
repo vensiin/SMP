@@ -8,7 +8,7 @@ from tensorflow.python.keras import activations
 def create_lstm_model(num_nodes, dropout, unrollings):
     model = keras.models.Sequential() # The type of model. Groups a linear stack of layers onto the model
 
-    # Adds the LSTM first layer (200 neurons)
+    # Adds the LSTM first layer (200 neurons). Forget Gate
     model.add(LSTM(units=num_nodes[0], # Number of LSTM cells in each layer
                    return_sequences=True, # True means output each time step for stacking
                    input_shape =(unrollings, 1),

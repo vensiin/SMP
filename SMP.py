@@ -51,7 +51,7 @@ if lower_case == "alphavantage":
                             float(v['4. close']), float(v['1. open'])] # Obtains the date from date by using date.date(), and all the values from the key/value pairs
                 df.loc[0,:] = data_row # Sets values for the entire row for each row
                 df.index = False # Assigns an index for every data row/date
-            df.to_csv(file_to_save)  # Saves the data as a CSV file since it is more neater than JSON
+            df.to_csv(file_to_save)  # Saves the data as a CSV file since it is neater than JSON
             print(f"Data saved to: {file_to_save}") # Output that we saved the file
 
 
@@ -86,7 +86,7 @@ ax.set_xlabel("Date", fontsize = 20) # Sets the x_label
 ax.set_ylabel("Mid Price", fontsize = 30) # Sets the y_label
 ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize = 25) # Function to change the ticks properties
 # ax.set_title("Alphavantage Inplace", fontsize = 25)
-plt.show()
+plt.show(block= False)
 
 high_prices = df.loc[:, "High"] # all the prices in the high column. This is now a numpy array after using to_numpy(). array[row_start:row_end, column_start:column_end]
 low_prices = df.loc[:, "Low"] # all the prices in the low column. This is now a numpy array after using to_numpy().
@@ -101,7 +101,7 @@ size_of_mp = int(elements_of_mp[0]) # Integer
 print(f"size_of_mp divided by 2: {size_of_mp // 2}")
 
 print(f"total # of data points: {int(elements_of_mp[0])} \n") # Outputs the total number of data points we have. np.prod(mid_prices.shape also works
-# print(f" here are the mid: {mid_prices}")
+print(f" here are the mid: {mid_prices}")
 
 #3. Separating the data into training and test data
 
@@ -219,7 +219,7 @@ ax.set_xlabel("Data Point", fontsize = 20)
 ax.set_ylabel("Mid Price", fontsize = 20)
 ax.legend(fontsize = 20, loc = 'upper left')
 ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize = 25)
-plt.show()
+plt.show(block=False)
 
 
 
@@ -273,7 +273,7 @@ ax.set_xlabel("Date", fontsize = 20)
 ax.set_ylabel("Mid Price", fontsize = 20)
 ax.legend(fontsize = 20, loc = 'upper left')
 ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize = 25)
-plt.show()
+plt.show(block=False)
 
 D = 1 # Dimensionality. Only viewing one thing price.
 num_unrollings = 50 # How many time steps we are looking back to predict the next value
@@ -389,7 +389,7 @@ print(f"Best validation loss: {min(history.history['val_loss']):.6f}")
 
 fig, axes = plt.subplots(1, 3, figsize=(20,5))
 # 1.1: MSE/Loss
-axes[0].plot(history.history["loss"], label = "Training Loss", marker="o", linewidth=2) # Graphs the MSE/Loss on the first diagram. How the model is learning
+axes[0].plot(history.history["loss"], label = "Training Loss", marker="o", linewidth=2) # Graphs the MSE/Loss on the first diagram. How the model is learning. Penalize error way harder
 axes[0].plot(history.history["val_loss"], label = "Validation Loss", marker="s", linewidth=2) # Graphs the validation loss. How the model is predicting on the validation set based on the previous data it was trained on.
 axes[0].set_xlabel("Epoch", fontsize = 12)
 axes[0].set_ylabel("Loss (MSE)", fontsize = 12)
@@ -399,8 +399,8 @@ axes[0].grid(True, alpha = .3)
 axes[0].set_yscale("log")
 
 # 1.2: MAE
-axes[1].plot(history.history["mae"], label = "Training MAE", marker="o", linewidth=2) # Graphs the MAE
-axes[1].plot(history.history["val_mae"], label = "Validation MAE", marker="s", linewidth=2)
+axes[1].plot(history.history["mae"], label = "Training MAE", marker="o", linewidth=2) # Graphs the MAE. Shows how well the model is doing to the human eye
+axes[1].plot(history.history["val_mae"], label = "Validation MAE", marker="s", linewidth=2)  # Graphs the validation_mae. Uses the adjusted weights per epoch on the validation section of the training_data 
 axes[1].set_xlabel("Epoch", fontsize = 12)
 axes[1].set_ylabel("Mean Absolute Error", fontsize = 12)
 axes[1].set_title("Training & Validation MAE", fontsize = 14, fontweight="bold")
@@ -430,7 +430,7 @@ axes[2].legend(fontsize = 11)
 axes[2].grid(True, alpha = .3)
 
 plt.tight_layout()
-plt.show()
+plt.show(block=False)
 
 # Making Predictions
 
@@ -444,7 +444,7 @@ print(f"shape of predictions: {predictions.shape}")
 print(f"Min actual Value: {actual.min()}") # Min val in actual values array
 print(f"Max actual Value: {actual.max()}") # Min val in actual values array
 print(f"MSE: {np.mean((predictions - actual) ** 2)}")
-print(f"MAE: {np.mean(np.abs(predictions - actual) ** 2)}")
+print(f"MAE: {np.mean(np.abs(predictions - actual))}")
 # print(f"Predictions shape: {predictions.shape}")  # (500, 1)
 # print(f"Actual values shape: {actual.shape}")     # (500, 1)
 
@@ -456,7 +456,9 @@ for i in range(10):
     pred_val = predictions[i, 0]
     actual_val = actual[i, 0]
     error = pred_val - actual_val
-    print(f"Index: {i:<10} Prediction: {pred_val:<15.6f} Actual: {actual_val:<15.6f} Error: {error:<15.6f}")
+    mse = np.mean((actual_val - pred_val) ** 2)
+    mae =  np.mean(np.abs(predictions - actual))
+    print(f"Index: {i:<10} Prediction: {pred_val:<15.6f} Actual: {actual_val:<15.6f} Error: {error:<15.6f} MSE: {mse:<15.6f} MAE: {mae:<15.6f}")
 
 # Visualizing first 100 predictions
 
@@ -467,13 +469,13 @@ plt.legend()
 plt.title('Stock Price Predictions vs Actual')
 plt.xlabel('Sample')
 plt.ylabel('Price')
-plt.show()
+plt.show(block=False)
 
 fig, axes = plt.subplots(2, 1, figsize=(15, 10))
 
 # Plot 1: First 100 predictions
-axes[0].plot(actual[:100], label='Actual', marker='o', linewidth=2, markersize=4, alpha=0.7) # Plots the first 100 actual values. The y-axis is handled by matplot
-axes[0].plot(predictions[:100], label='Predicted', marker='x', linewidth=2, markersize=4, alpha=0.7) # Plots the first 100 predictions. The y-axis is handled by matplot
+axes[0].plot(actual[:100], label='Actual', marker='o', linewidth=2, markersize=4, alpha=0.7) # Plots the first 100 actual values. The x-axis is generated by matplot
+axes[0].plot(predictions[:100], label='Predicted', marker='x', linewidth=2, markersize=4, alpha=0.7) # Plots the first 100 predictions. The x-axis is generated by matplot
 axes[0].set_xlabel('Sample Index', fontsize=12)
 axes[0].set_ylabel('Normalized Price', fontsize=12)
 axes[0].set_title('LSTM Predictions vs Actual (First 100 Samples) lambda method', fontsize=14, fontweight='bold')
@@ -493,7 +495,7 @@ axes[1].legend(fontsize=11)
 axes[1].grid(True, alpha=0.3)
 
 plt.tight_layout()
-plt.show()
+plt.show(block=False)
 
 print("\n" + "="*60)
 print("ALL DONE!")
