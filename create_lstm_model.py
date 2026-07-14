@@ -8,31 +8,35 @@ from tensorflow.python.keras import activations
 def create_lstm_model(num_nodes, dropout, unrollings):
     model = keras.models.Sequential() # The type of model. Groups a linear stack of layers onto the model
 
-    # Adds the LSTM first layer (200 neurons). Forget Gate
-    model.add(LSTM(units=num_nodes[0], # Number of LSTM cells in each layer
-                   return_sequences=True, # True means output each time step for stacking
+    # Adds the LSTM Hidden first layer (200 neurons). Forget Gate
+    model.add(LSTM(units=num_nodes[0], # Number of LSTM Neurons in each layer. Outputs 200 values per timestep (Hidden & cell state)
+                   return_sequences=True, # True means each output (hidden ) from each time step will be passed onto the next LSTM layer, as well as the next time step (c & h) however not the next sequence.
                    input_shape =(unrollings, 1),
-                   kernel_initializer='glorot_uniform',)) # Initializes weights
+                   kernel_initializer='glorot_uniform',)) # Initializes weights. Updates after every batch
     model.add(Dropout(dropout))
 
-    # Second LSTM layer
+    # Second LSTM Hidden layer
     model.add(LSTM(units=num_nodes[1]
                    , return_sequences=True
                    , kernel_initializer='glorot_uniform')) # Initializes weights
     model.add(Dropout(dropout))
 
-    # Third LSTM layer
+    # Third LSTM Hidden layer
     model.add(LSTM(units=num_nodes[2]
-                   , return_sequences=False # Only want the last output
+                   , return_sequences=False # Same process as the other layers, however after going through timesteps 1-49 this only sends the last 150 values from the very last timestep to the dense layer for prediction
                    , kernel_initializer='glorot_uniform')) # Initializes weights
     model.add(Dropout(dropout))
 
-    # Hidden layer. The part that does the calculations
-    model.add(Dense(units=1,
+    # Output layer
+    model.add(Dense(units=1, # Final output. one weighted sum and gives you the predicted price.
                     kernel_initializer='glorot_uniform', # Initializes weights
                     bias_initializer=keras.initializers.RandomUniform(-0.1, 0.1),
                     ))
 
     return model
+
+"""
+Timeline of model
+"""
 
 

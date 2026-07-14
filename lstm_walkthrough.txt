@@ -1,0 +1,125 @@
+"""
+HOW THE LSTM ACTUALLY RUNS
+===========================
+Architecture: LSTM(200) -> LSTM(200) -> LSTM(150) -> Dense(1)
+Input: 50 timesteps, 1 feature (a scaled mid price) per timestep.
+"""
+
+# ---------------------------------------------------------------------------
+# PART 1 -- VOCABULARY
+# ---------------------------------------------------------------------------
+# unit  = node = neuron = circle in a textbook diagram. Same thing.
+#         LSTM(units=200) means "this layer has 200 circles".
+#
+# Each circle owns:
+#   - 4 weighted sums (forget gate, input gate, output gate, candidate value)
+#   - c  the cell state   -> PRIVATE. Its memory. Never leaves the circle. Only goes to next timestep for sequence (Based on your neurons)
+#   - h  the hidden state -> PUBLIC.  Its output for this timestep. Goes to next timestep as well as layer (Based on your neurons)
+#
+# A layer's output at one timestep = the h of every circle in it.
+#   Layer 1 -> 200 numbers.   Layer 3 -> 150 numbers.
+
+
+# ---------------------------------------------------------------------------
+# PART 2 -- WHAT ONE UNIT DOES AT ONE TIMESTEP (pseudocode, one circle)
+# ---------------------------------------------------------------------------
+def one_unit_one_timestep(x_t, h_prev_layer, c_prev, W, b):
+    """
+    x_t          : the input arriving from below (for layer 1, a single price)
+    h_prev_layer : the 200 h values this layer produced at t-1  <-- ALL of them
+    c_prev       : THIS unit's own memory from t-1 (one number)
+    """
+    # Every gate looks at the same two things: the new input, and what the
+    # whole layer said last timestep. That's the recurrent part.
+    combined = concat(x_t, h_prev_layer)
+
+    f = sigmoid(dot(W.f, combined) + b.f)   # forget:  how much old memory to keep (0..1)
+    i = sigmoid(dot(W.i, combined) + b.i)   # input:   how much new info to let in  (0..1)
+    o = sigmoid(dot(W.o, combined) + b.o)   # output:  how much memory to reveal    (0..1)
+    g = tanh(dot(W.g, combined) + b.g)      # candidate: the new info itself       (-1..1)
+
+    c_new = f * c_prev + i * g              # update the private memory
+    h_new = o * tanh(c_new)                 # decide what to say out loud
+
+    return h_new, c_new                     # h goes out, c stays home
+
+
+# ---------------------------------------------------------------------------
+# PART 3 -- WHAT A WHOLE LAYER DOES OVER 50 TIMESTEPS
+# ---------------------------------------------------------------------------
+def one_layer(sequence, units, return_sequences):
+    """
+    sequence : a list of 50 inputs. For layer 1 each input is 1 number.
+               For layer 2 each input is the 200 numbers layer 1 produced.
+    """
+    h = zeros(units)   # everyone starts with nothing to say
+    c = zeros(units)   # and an empty memory
+    outputs = []
+
+    for t in range(50):                       # the SAME weights every loop
+        h, c = run_all_units(sequence[t], h, c)   # 200 units, all at once
+        outputs.append(h)                     # record what the layer said at t
+
+    if return_sequences:
+        return outputs        # all 50 -> shape (50, units)   [layers 1 and 2]
+    else:
+        return outputs[-1]    # last one -> shape (units,)    [layer 3]
+
+
+# ---------------------------------------------------------------------------
+# PART 4 -- THE FULL STACK, WITH SHAPES
+# ---------------------------------------------------------------------------
+# (shapes below are for ONE sequence; add a batch dimension in real code)
+#
+#   raw input              (50, 1)     50 prices
+#         |
+#   LSTM 1, 200 units      (50, 200)   return_sequences=True  -> keeps all 50
+#         |                            each row = what 200 units said at that t
+#   LSTM 2, 200 units      (50, 200)   return_sequences=True  -> keeps all 50
+#         |
+#   LSTM 3, 150 units      (150,)      return_sequences=False -> KEEPS ONLY t=50
+#         |                            timesteps 1..49 are discarded here
+#   Dense(1)               (1,)        one weighted sum of those 150 numbers
+#         |
+#   predicted scaled price
+#
+# The collapse from a sequence to a single number happens in exactly one place:
+# return_sequences=False on layer 3. Everything before it is still a sequence.
+
+
+# ---------------------------------------------------------------------------
+# PART 5 -- WHY THE PARAMETER COUNT LOOKS LIKE THAT
+# ---------------------------------------------------------------------------
+# params = 4 * (input_dim + units + 1) * units
+#          ^        ^          ^     ^
+#          |        |          |     +-- bias, one per unit per gate
+#          |        |          +-------- each unit sees the layer's own 200 h's
+#          |        +------------------- each unit sees the input from below
+#          +---------------------------- 4 gates: forget, input, output, candidate
+#
+# Layer 1: 4 * (1   + 200 + 1) * 200 = 161,600
+# Layer 2: 4 * (200 + 200 + 1) * 200 = 320,800
+# Layer 3: 4 * (200 + 150 + 1) * 150 = 210,600
+# Dense:       150 weights + 1 bias  =     151
+#
+# Check these against model.summary() -- they will match exactly.
+
+
+# ---------------------------------------------------------------------------
+# PART 6 -- THE PLAIN-ENGLISH VERSION
+# ---------------------------------------------------------------------------
+# Picture 200 people in a room (that's layer 1).
+#
+#   Every timestep:
+#     1. Everyone hears the same new price.
+#     2. Everyone hears what all 200 people said last timestep.
+#     3. Each person updates their private notepad (cell state):
+#        erase some of it (forget gate), write some new stuff (input gate).
+#     4. Each person says one number out loud (hidden state), choosing how
+#        much of their notepad to reveal (output gate).
+#
+#   The 200 spoken numbers go UP to the next room (layer 2) and also come
+#   back around as gossip for the next timestep. The notepads never leave.
+#
+#   After 50 timesteps, room 3 (150 people) reports only its final round of
+#   150 numbers. Dense(1) averages those with learned weights -> your price.

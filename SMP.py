@@ -438,13 +438,13 @@ print("\n" + "="*60)
 print("GENERATING PREDICTIONS")
 print("="*60)
 
-predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions   
+predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions. Predicts at the end of every sequence
 actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
 print(f"shape of predictions: {predictions.shape}")
 print(f"Min actual Value: {actual.min()}") # Min val in actual values array
 print(f"Max actual Value: {actual.max()}") # Min val in actual values array
-print(f"MSE: {np.mean((predictions - actual) ** 2)}")
-print(f"MAE: {np.mean(np.abs(predictions - actual))}")
+# print(f"MSE: {np.mean((predictions - actual) ** 2)}")
+# print(f"MAE: {np.mean(np.abs(predictions - actual))}")
 # print(f"Predictions shape: {predictions.shape}")  # (500, 1)
 # print(f"Actual values shape: {actual.shape}")     # (500, 1)
 
@@ -457,7 +457,7 @@ for i in range(10):
     actual_val = actual[i, 0]
     error = pred_val - actual_val
     mse = np.mean((actual_val - pred_val) ** 2)
-    mae =  np.mean(np.abs(predictions - actual))
+    mae =  np.mean(np.abs(actual_val - pred_val))
     print(f"Index: {i:<10} Prediction: {pred_val:<15.6f} Actual: {actual_val:<15.6f} Error: {error:<15.6f} MSE: {mse:<15.6f} MAE: {mae:<15.6f}")
 
 # Visualizing first 100 predictions
