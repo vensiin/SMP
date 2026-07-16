@@ -438,7 +438,7 @@ print("\n" + "="*60)
 print("GENERATING PREDICTIONS")
 print("="*60)
 
-predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions. Predicts at the end of every sequence
+predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions. Predicts at the end of every sequence 
 actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
 print(f"shape of predictions: {predictions.shape}")
 print(f"Min actual Value: {actual.min()}") # Min val in actual values array

@@ -123,3 +123,7 @@ def one_layer(sequence, units, return_sequences):
 #
 #   After 50 timesteps, room 3 (150 people) reports only its final round of
 #   150 numbers. Dense(1) averages those with learned weights -> your price.
+
+# 1. Input which is the timestep enters the model
+# 2. Input is then multiplied by the specific weights in each node. Once it is multiplied by each node, a vector gets sent to the next layer with n amount of values.
+# 3. As the b

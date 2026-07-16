@@ -10,7 +10,7 @@ def create_lstm_model(num_nodes, dropout, unrollings):
 
     # Adds the LSTM Hidden first layer (200 neurons). Forget Gate
     model.add(LSTM(units=num_nodes[0], # Number of LSTM Neurons in each layer. Outputs 200 values per timestep (Hidden & cell state)
-                   return_sequences=True, # True means each output (hidden ) from each time step will be passed onto the next LSTM layer, as well as the next time step (c & h) however not the next sequence.
+                   return_sequences=True, # True means each output (hidden h) from each time step will be passed onto the next LSTM layer. (c & h) go onto the next timestep until its sequence is over then resets once a new sequence begins
                    input_shape =(unrollings, 1),
                    kernel_initializer='glorot_uniform',)) # Initializes weights. Updates after every batch
     model.add(Dropout(dropout))
