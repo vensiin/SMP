@@ -16,6 +16,7 @@ from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normal
 import LRS
 from dataGenerator import *
 from create_lstm_model import *
+from multi_Step_auto_aggressive import *
 from LRS import *
 import os
 from dotenv import load_dotenv
@@ -438,8 +439,9 @@ print("\n" + "="*60)
 print("GENERATING PREDICTIONS")
 print("="*60)
 
-predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions. Predicts at the end of every sequence 
+predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions. Predicts at the end of every sequence
 actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
+print(f"actual: {actual}")
 print(f"shape of predictions: {predictions.shape}")
 print(f"Min actual Value: {actual.min()}") # Min val in actual values array
 print(f"Max actual Value: {actual.max()}") # Min val in actual values array
@@ -498,7 +500,59 @@ plt.tight_layout()
 plt.show(block=False)
 
 print("\n" + "="*60)
-print("ALL DONE!")
+print("GENERATING PREDICTIONS INTO THE FUTURE")
+print("="*60)
+
+# Predicting n amount of times into the future
+n_predict_once = 50  # Predict 50 steps at a time
+test_points_seq = np.arange(11000, 12000, 50).tolist()  # Starting points
+
+predictions_over_time = []
+all_predictions = []
+x_axis_seq = []
+
+for w_i in test_points_seq:
+    # Get the sequence leading up to this point
+    start_idx = w_i - num_unrollings
+    initial_seq = all_mid_data[start_idx:w_i].reshape(1, num_unrollings, 1) # Flagged
+
+    # Predict 50 steps ahead
+    multi_step_predictions = predict_sequence(model, initial_seq, n_predict_once)
+    all_predictions.append(multi_step_predictions)
+
+    # Track x-axis positions
+    x_axis = list(range(w_i, w_i + n_predict_once))
+    x_axis_seq.append(x_axis)
+
+    # Calculate MSE for this prediction window
+    actual_values = all_mid_data[w_i:w_i + n_predict_once]
+    mse = np.mean((np.array(predictions) - actual_values) ** 2)
+    print(f"Prediction window at {w_i}: MSE = {mse:.5f}")
+
+print(f"predictions: {len(all_predictions)}")
+print(f"x_axis: {len(x_axis_seq)}")
+
+print("\n" + "="*60)
+print("VISUALIZING PREDICTIONS INTO THE FUTURE")
 print("="*60)
 
 
+
+plt.figure(figsize=(18, 9))
+
+# Plot actual data
+plt.plot(range(len(all_mid_data)), all_mid_data, color='black',
+         linewidth=2, label='True', alpha=0.7)
+
+# Plot each prediction window
+for i, (predictions, x_axis) in enumerate(zip(all_predictions, x_axis_seq)):
+    plt.plot(x_axis, predictions, linewidth=2, alpha=0.6,
+             label=f'Prediction {i+1}' if i < 3 else None)
+
+plt.title('Multi-Step Ahead Predictions', fontsize=18)
+plt.xlabel('Time Step', fontsize=14)
+plt.ylabel('Normalized Price', fontsize=14)
+plt.xlim(11000, 12500)  # Focus on prediction region
+plt.legend(fontsize=12)
+plt.grid(True, alpha=0.3)
+plt.show()
