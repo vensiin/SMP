@@ -13,16 +13,17 @@ def predict_sequence(model, initial_sequence, n_steps):
         List of predictions
     """
     predictions = [] # The predictions from the model
-    current_sequence = initial_sequence.copy()
+    current_sequence = initial_sequence.copy() # The sequence of values
 
     # Loops n amount of times
     for _ in range(n_steps):
         # Predict next value
-        next_pred = model.predict(current_sequence, verbose=0)[0, 0]
+        next_pred = model.predict(current_sequence, verbose=0)[0, 0] # Provides us with the raw value from the prediction
         predictions.append(next_pred) # Adds the value to the predictions list
 
         # Slide window: remove oldest, add prediction
-        current_sequence = np.roll(current_sequence, -1, axis=1)
-        current_sequence[0, -1, 0] = next_pred  # ⬅️ Use own prediction!
+        current_sequence = np.roll(current_sequence, -1, axis=1) # Moves the elements in the beginning of the list towards the back
+        # Replaces our element we moved towards the end with our prediction 
+        current_sequence[0, -1, 0] = next_pred
 
     return predictions

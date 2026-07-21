@@ -508,29 +508,28 @@ n_predict_once = 50  # Predict 50 steps at a time
 test_points_seq = np.arange(11000, 12000, 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
 
 all_predictions = [] # Where all the predictions will be stored
-x_axis_seq = []
+x_axis_seq = [] # Where the x-axis will be stored
 
 # Goes through each element in the test_points_seqn
 for w_i in test_points_seq:
     # Get the sequence leading up to this point
-    start_idx = w_i - num_unrollings # 
-    initial_seq = all_mid_data[start_idx:w_i].reshape(1, num_unrollings, 1)
+    start_idx = w_i - num_unrollings # Starting index is 10950. Uses 50 timestep prices to predict 11000. 11000 is not included in the [10950, 11000]. goes up to 10999.
+    initial_seq = all_mid_data[start_idx:w_i].reshape(1, num_unrollings, 1) # Reshapes the data into shape the model takes in
 
     # Predict 50 steps ahead
-    multi_step_predictions = predict_sequence(model, initial_seq, n_predict_once)
+    multi_step_predictions = predict_sequence(model, initial_seq, n_predict_once) # Runs the function with the trained model, the sequence of data formatted for model, and the #
     all_predictions.append(multi_step_predictions)
 
     # Track x-axis positions
-    x_axis = list(range(w_i, w_i + n_predict_once))
+    x_axis = list(range(w_i, w_i + n_predict_once)) # Creates a list of (11000, 11000 + 50) and so on
     x_axis_seq.append(x_axis)
 
-    # Calculate MSE for this prediction window
-    actual_values = all_mid_data[w_i:w_i + n_predict_once]
-    mse = np.mean((np.array(predictions) - actual_values) ** 2)
-    print(f"Prediction window at {w_i}: MSE = {mse:.5f}")
+    actual_values = all_mid_data[w_i:w_i + n_predict_once] # Actual prices/values
+    mse = np.mean((np.array(predictions) - actual_values) ** 2) # Calculates the MSE
+    print(f"Prediction window at {w_i}: MSE = {mse:.5f}") # Outputs the prediction window and the mse for said prediction window
 
-print(f"predictions: {len(all_predictions)}")
-print(f"x_axis: {len(x_axis_seq)}")
+print(f"predictions: {len(all_predictions)}") # Amount of elements in prediction
+print(f"x_axis: {len(x_axis_seq)}") # Amount of elements in x-axis
 
 print("\n" + "="*60)
 print("VISUALIZING PREDICTIONS INTO THE FUTURE")
