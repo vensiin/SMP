@@ -505,16 +505,16 @@ print("="*60)
 
 # Predicting n amount of times into the future
 n_predict_once = 50  # Predict 50 steps at a time
-test_points_seq = np.arange(11000, 12000, 50).tolist()  # Starting points
+test_points_seq = np.arange(11000, 12000, 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
 
-predictions_over_time = []
-all_predictions = []
+all_predictions = [] # Where all the predictions will be stored
 x_axis_seq = []
 
+# Goes through each element in the test_points_seqn
 for w_i in test_points_seq:
     # Get the sequence leading up to this point
-    start_idx = w_i - num_unrollings
-    initial_seq = all_mid_data[start_idx:w_i].reshape(1, num_unrollings, 1) # Flagged
+    start_idx = w_i - num_unrollings # 
+    initial_seq = all_mid_data[start_idx:w_i].reshape(1, num_unrollings, 1)
 
     # Predict 50 steps ahead
     multi_step_predictions = predict_sequence(model, initial_seq, n_predict_once)
