@@ -278,12 +278,12 @@ plt.show(block=False)
 
 D = 1 # Dimensionality. Only viewing one thing price.
 num_unrollings = 50 # How many time steps we are looking back to predict the next value
-batch_size = 500 # 500 Sequences (Samples)
+num_of_sequences = 500 # 500 Sequences (Samples)
 num_nodes = [200, 200, 150] # Hidden nodes in each LSTM layer
 n_layers = len(num_nodes)
 dropout_rate = 0.2 # Dropout amount to avoid memorizing instead of learning
 
-dg = DataGenerator(train_data, batch_size=batch_size, num_unroll=num_unrollings)
+dg = DataGenerator(train_data, batch_size=num_of_sequences, num_unroll=num_unrollings)
 u_data, u_labels = dg.unroll_batches() # Stores the arrays of data & labels from the function
 
 # For loop iterating through both the index with data & labels
@@ -303,7 +303,7 @@ model.summary() # Outputs a summary of the model
 initial_learning_rate = 0.001
 min_learning_rate = 0.00001
 num_epochs = 50
-train_batch_size = 32
+train_num_of_sequences = 32
 
 # Assign the wrapper function to a variable
 # lr_function = LRS.wrapper(initial_learning_rate,min_learning_rate)
@@ -352,8 +352,8 @@ model.compile(optimizer = optimizer,
               loss = 'mse', # Using the mse as the loss function
               metrics = ['mae']) # Calculates the MAE to view. Whatever metrics we want to be viewed must be included or keras won't include it as a key
 
-X_train = np.array(u_data).T.reshape(batch_size, num_unrollings, D) # Training data. Reformatted into (500, 50, 1) 500 samples, 50 unrollings, 1 feature being looked at
-y_train = np.array(u_labels).T.reshape(batch_size, num_unrollings, 1) # Testing data. Reformatted into (500, 50, 1) 500 samples, 50 unrollings, 1 feature being looked at
+X_train = np.array(u_data).T.reshape(num_of_sequences, num_unrollings, D) # Training data. Reformatted into (500, 50, 1) 500 samples, 50 unrollings, 1 feature being looked at
+y_train = np.array(u_labels).T.reshape(num_of_sequences, num_unrollings, 1) # Testing data. Reformatted into (500, 50, 1) 500 samples, 50 unrollings, 1 feature being looked at
 
 # print(f"\nX_train shape: {X_train.shape}")  # (500, 50, 1) 500 samples (sequences), each example takes 50 days of history, with 1 feature being looked at
 # print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
@@ -365,7 +365,7 @@ history = model.fit(
     X_train, # Training data
     y_train[:, -1, :], # Target data/ Actual values
     epochs=num_epochs, # Number of epochs
-    batch_size=train_batch_size, # Default batch size
+    batch_size=num_of_sequences, # Default batch size
     validation_split=0.2, # Sets aside 20% of the data to be used for validation. Uses the weights & bias from the 80% and uses it on the other 20% of the set aside data. Prevents overfitting (Memorizing instead of learning)
     callbacks=[lr_callback, early_stop, checkpoint], # Automatically calls lr_callback(lr_decay_schedule(epoch)), early_stop, and, checkpoint
     verbose=1
@@ -525,7 +525,7 @@ for w_i in test_points_seq:
     x_axis_seq.append(x_axis)
 
     actual_values = all_mid_data[w_i:w_i + n_predict_once] # Actual prices/values
-    mse = np.mean((np.array(predictions) - actual_values) ** 2) # Calculates the MSE
+    mse = np.mean((np.array(multi_step_predictions) - actual_values) ** 2) # Calculates the MSE
     print(f"Prediction window at {w_i}: MSE = {mse:.5f}") # Outputs the prediction window and the mse for said prediction window
 
 print(f"predictions: {len(all_predictions)}") # Amount of elements in prediction
