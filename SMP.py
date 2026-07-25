@@ -11,9 +11,12 @@ import tensorflow as tf # Imports TensorFlow, a machine learning library.
 import keras
 from keras import layers
 from keras.layers import LSTM, Dense, Dropout
+from rich import color
 from sklearn.preprocessing import MinMaxScaler # Imports a tool to scale (normalize) values into a range (like 0 → 1).
 
 import LRS
+from user import *
+from forecast_Predictions import  *
 from dataGenerator import *
 from create_lstm_model import *
 from multi_Step_auto_aggressive import *
@@ -24,20 +27,22 @@ from dotenv import load_dotenv
 load_dotenv()
 # 1. Obtaining the data
 
-data_source = "kaggle"
-lower_case = data_source.lower()
+data_source = "kaggle".lower()
 
 api_key = os.getenv("API_KEY")
+
+user1 = my_user()
+user1.user_enter_ticker()
 
 ticker = "AAL"
 
 # Conditional that checks which method we are using
-if lower_case == "alphavantage":
+if data_source == "alphavantage":
 
 
-    url_string = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey={api_key}" # Website we are pulling data from
+    url_string = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={user1.return_ticker()}&outputsize=full&apikey={api_key}" # Website we are pulling data from
 
-    file_to_save = f"stock_market_data-{ticker}.csv" # Name of the file we are saving the data to
+    file_to_save = f"stock_market_data-{user1.return_ticker()}.csv" # Name of the file we are saving the data to
 
     # Checks to see if the path is made
     if not os.path.exists(file_to_save):
@@ -65,7 +70,7 @@ if lower_case == "alphavantage":
 
 # Kaggle method
 else:
-    df = pd.read_csv(os.path.join('Stocks', 'hpq.us.txt'), delimiter=',',
+    df = pd.read_csv(os.path.join('Stocks', f'{user1.return_ticker().lower()}.us.txt'), delimiter=',',
                      usecols=['Date', 'Open', 'High', 'Low', 'Close'])
     print('Loaded data from the Kaggle repository')
 
@@ -81,7 +86,7 @@ print(f"shape:{range(df.shape[0])}")
 fig,ax = plt.subplots(figsize=(25,16)) # Creates the graph
 ax.plot(range(df.shape[0]), (df["Low"] + df["High"]) / 2) # Parameters are x and y. X is just all the rows in the dataframe and y is the average of the low and high.
 # This gives us our x-ticks. We iterate through n elements in our dataframe in steps of 500. We then apply the dates for every 500 steps
-ax.set_xticks(range(0, df.shape[0], 500), df["Date"].loc[::500], rotation = 45, fontsize = 50) # Takes 2 arguments; the number position of the amount of ticks & the label for each tick which would be every 500 dates.
+ax.set_xticks(range(0, df.shape[0], round(df.shape[0] // 24)), df["Date"].loc[::df.shape[0] // 24 ], rotation = 45, fontsize = 50) # Takes 2 arguments; the number position of the amount of ticks & the label for each tick which would be every 500 dates.
 ax.set_title("Times Series Daily", fontsize = 25) # Sets the title
 ax.set_xlabel("Date", fontsize = 20) # Sets the x_label
 ax.set_ylabel("Mid Price", fontsize = 30) # Sets the y_label
@@ -109,8 +114,8 @@ print(f" here are the mid: {mid_prices}")
 # train_data = mid_prices[:size_of_mp // 2] # First half of data points, so this is going to be the data we use to train. This is now a numpy array
 # test_data = mid_prices[size_of_mp // 2:] # Last half data points, test if the trained model learned. Also a numpy array
 
-train_data = mid_prices[:11000]
-test_data = mid_prices[11000:]
+train_data = mid_prices[:user1.training_vs_test_dp(size_of_mp)]
+test_data = mid_prices[user1.training_vs_test_dp(size_of_mp):]
 
 Scaler = MinMaxScaler() # Scaler to make all values between 0 and 1. The reason for this is to let the machine learn smoother and faster. (Formula: x-min/max-min)
 # 2513 rows, 1 column for this specific ticker
@@ -121,14 +126,16 @@ test_data = test_data.values.reshape(-1, 1).copy() # After slicing the data, we 
 print(f"test data: {test_data}")
 
 # 4. Converting the training data into scaled ones
-smoothing_wndw_size = 2500 # chunk of data we will be processing per loop
+smoothing_wndw_size = user1.sws(size_of_mp) # chunk of data we will be processing per loop
 print(f"smoothing_wndw_size: {smoothing_wndw_size}")
 stop = size_of_mp // 2
 
-di = 0
+now = 4
+bounds = np.linspace(0, train_data.shape[0], (now + 1), dtype=int)
 
+di = 0
 # For loop that goes over each chunk of data. (Must automate because right now it only works for AAL )
-for di in range(di, 10000, smoothing_wndw_size):
+for di in range(di, user1.sws_calculation_stop(size_of_mp), smoothing_wndw_size):
     '''
     The reason we are splitting apart the data is because we do not want the older data to be negligible compared to the new data.
     So to counter that we just split the data set into different chunks so that the old stocks do not get compared to near 0 decimals compared to the larger stock prices today.
@@ -535,10 +542,7 @@ print("\n" + "="*60)
 print("VISUALIZING PREDICTIONS INTO THE FUTURE")
 print("="*60)
 
-
-
 plt.figure(figsize=(18, 9))
-
 # Plot actual data
 plt.plot(range(len(all_mid_data)), all_mid_data, color='black',
          linewidth=2, label='True', alpha=0.7)
