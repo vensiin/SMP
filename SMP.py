@@ -87,7 +87,7 @@ fig,ax = plt.subplots(figsize=(25,16)) # Creates the graph
 ax.plot(range(df.shape[0]), (df["Low"] + df["High"]) / 2) # Parameters are x and y. X is just all the rows in the dataframe and y is the average of the low and high.
 # This gives us our x-ticks. We iterate through n elements in our dataframe in steps of 500. We then apply the dates for every 500 steps
 ax.set_xticks(range(0, df.shape[0], round(df.shape[0] // 24)), df["Date"].loc[::df.shape[0] // 24 ], rotation = 45, fontsize = 50) # Takes 2 arguments; the number position of the amount of ticks & the label for each tick which would be every 500 dates.
-ax.set_title("Times Series Daily", fontsize = 25) # Sets the title
+ax.set_title(f"Times Series Daily: {user1.return_ticker().upper()}", fontsize = 25) # Sets the title
 ax.set_xlabel("Date", fontsize = 20) # Sets the x_label
 ax.set_ylabel("Mid Price", fontsize = 30) # Sets the y_label
 ax.tick_params(axis = 'both', length = 20, width = 6, color = "blue" ,labelsize = 25) # Function to change the ticks properties
@@ -126,53 +126,18 @@ test_data = test_data.values.reshape(-1, 1).copy() # After slicing the data, we 
 print(f"test data: {test_data}")
 
 # 4. Converting the training data into scaled ones
-smoothing_wndw_size = user1.sws(size_of_mp) # chunk of data we will be processing per loop
-print(f"smoothing_wndw_size: {smoothing_wndw_size}")
-stop = size_of_mp // 2
 
-now = 4
-bounds = np.linspace(0, train_data.shape[0], (now + 1), dtype=int)
+# Number of chunks
+now = 4 # How many chunks we want to separate the training_data. 4 is usually in the middle and gets rid of the most moderate noise
+bounds = np.linspace(0, train_data.shape[0], (now + 1), dtype=int) # Creates values from 0 up to the training data shape evenly.
+print(f"bounds: {bounds}") # Outputs the evenly distributed values between 0 & our training space
 
-di = 0
-# For loop that goes over each chunk of data. (Must automate because right now it only works for AAL )
-for di in range(di, user1.sws_calculation_stop(size_of_mp), smoothing_wndw_size):
-    '''
-    The reason we are splitting apart the data is because we do not want the older data to be negligible compared to the new data.
-    So to counter that we just split the data set into different chunks so that the old stocks do not get compared to near 0 decimals compared to the larger stock prices today.
-    Also if we go over the amount of data we have, we will get an indexing error
+# Iterates through 2 arrays and creates a tuple which is a sliding window
+for start, end in zip(bounds[:-1], bounds[1:]): # Start is every element except the last and last is every element except the first
+    chunk = train_data[start:end, :] # Same logic as the comment made about 2D array slicing
+    Scaler.fit(chunk) # Scales that window chunk of data
+    train_data[start:end, :] = Scaler.transform(chunk) # Replaces the original value with the scaled ones
 
-    Ex. [10, 12, 14, 300, 320, 350]
-    If we scale all at once, we'll get [0.0, 0.006, 0.011, 0.85, 0.91, 1.0]. All the early values are negligible and hold no weight.
-    When we scale the values, now all the prices hold some form of weight which could influence the training.
-
-    Simple analogy:
-    Imagine you’re tracking a kid’s growth:
-    At age 5: height changes from 3’0 → 3’5
-    At age 15: height changes from 5’0 → 5’5
-    If you only look at raw inches, the later growth (60" to 65") looks “bigger.”
-    But relative to their size, both are +5 inches.
-
-    Scaling makes both periods equally important so the model can see “this stock went up relative to its normal range” instead of “this number is bigger.”
-    '''
-
-    # We are using numpy 2d array slicing, where the syntax is array[row_slice, column_slice]. The format is [x,:], where x is the row = full row; [:,x], where x is the column, = full column. array[row_start:row_end, column_start:column_end]
-    Scaler.fit(train_data[di:di+smoothing_wndw_size, :]) # So our first iteration would be from rows 0 to 2500, then our next would be from rows 2500:5000, and so on. It stores the (min,max) pairs per each loop
-    print(Scaler.fit(train_data[di:di+smoothing_wndw_size, :]))
-    train_data[di:di + smoothing_wndw_size, :] = Scaler.transform(train_data[di:di + smoothing_wndw_size, :]) # Replaces the original values with the scaled ones (0-1) using the scaling formula which uses the (min,max) values from scalar.fit
-
-    '''
-    Example of how the 2d array looks
-    [[1],
-     [2],
-     [3],] where there is one column and many rows
-    '''
-
-left_over = di + smoothing_wndw_size
-Scaler.fit(train_data[left_over:, :]) # All the rows starting from left_over and all the columns(there is only 1 column.)
-train_data[left_over:, :] = Scaler.transform(train_data[left_over:, :])
-# Scaler.fit(train_data[di+smoothing_wndw_size:,:]) # Do the same but for the rest of the data
-# print(Scaler.fit(train_data[di+smoothing_wndw_size:,:]))
-# train_data[di:di + smoothing_wndw_size, :] = Scaler.transform(train_data[di:di + smoothing_wndw_size, :]) # Do the same for the last bit of data
 
 train_data = train_data.reshape(-1) # Reshapes the data back into an array
 print(f"Viewing what the train_data looks like: {train_data}")
@@ -185,7 +150,7 @@ EMA = 0.0 # Estimated moving average
 gamma = 0.1 # Controls how the EMA reacts. 0.1 for old data to have more weight (10% new, 90% old) and 0.9 for new data to have more weight (10% old, 90% new)
 
 # for ti in range(size_of_mp // 2)
-for ti in range(11000):
+for ti in range(train_data.shape[0]):
     EMA = gamma * train_data[ti] + (1-gamma) * EMA # Formula: (gamma * xt) + (1-gamma) * EMA, where t is an integer/index
     train_data[ti] = EMA # Swap the old data points for the new EMA ones
 all_mid_data = np.concatenate([train_data, test_data], axis = 0) # Puts all the data in one array
@@ -222,7 +187,7 @@ fig, ax = plt.subplots(figsize=(25,16))
 ax.plot(range(df.shape[0]), all_mid_data, color = 'r', label = "True") # Plot all the rows in the dataframe as x and all the mid_data as our y.
 ax.plot(range(window_size, N), std_avg_predictions, color = 'b', label = "Predictions") # Plot x from 100 to the size of the rows in our dataframe
 ax.set_xticks(range(0, df.shape[0], 500), df["Date"].loc[::500], rotation = 45)
-ax.set_title("Standard Average", fontsize = 25)
+ax.set_title(f"Standard Average: {user1.return_ticker().upper()}", fontsize = 25)
 ax.set_xlabel("Data Point", fontsize = 20)
 ax.set_ylabel("Mid Price", fontsize = 20)
 ax.legend(fontsize = 20, loc = 'upper left')
@@ -276,7 +241,7 @@ fig, ax = plt.subplots(figsize=(25,16))
 ax.plot(range(df.shape[0]), all_mid_data, color = 'orchid', label = "True")
 ax.plot(range(0, N), ema_avg_predictions, color = 'gold', label = "Predictions")
 # ax.set_xticks(range(0, df.shape[0], 500), df["Date"].loc[::500], rotation = 45) # If we do not set x_ticks, it will average the data out for us
-ax.set_title("Exponential Moving Average", fontsize = 25)
+ax.set_title(f"Exponential Moving Average: {user1.return_ticker().upper()}", fontsize = 25)
 ax.set_xlabel("Date", fontsize = 20)
 ax.set_ylabel("Mid Price", fontsize = 20)
 ax.legend(fontsize = 20, loc = 'upper left')
@@ -510,9 +475,11 @@ print("\n" + "="*60)
 print("GENERATING PREDICTIONS INTO THE FUTURE")
 print("="*60)
 
+
+ior = np.linspace(train_data.shape[0], test_data[0], 1, )
 # Predicting n amount of times into the future
 n_predict_once = 50  # Predict 50 steps at a time
-test_points_seq = np.arange(11000, 12000, 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
+test_points_seq = np.arange(train_data.shape[0], math.floor((train_data.shape[0] + (train_data.shape[0] * .091))), 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
 
 all_predictions = [] # Where all the predictions will be stored
 x_axis_seq = [] # Where the x-axis will be stored
