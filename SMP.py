@@ -127,7 +127,7 @@ print(f"test data: {test_data}")
 
 # 4. Converting the training data into scaled ones
 
-# Number of chunks
+# Number of windows
 now = 4 # How many chunks we want to separate the training_data. 4 is usually in the middle and gets rid of the most moderate noise
 bounds = np.linspace(0, train_data.shape[0], (now + 1), dtype=int) # Creates values from 0 up to the training data shape evenly.
 print(f"bounds: {bounds}") # Outputs the evenly distributed values between 0 & our training space
@@ -476,7 +476,6 @@ print("GENERATING PREDICTIONS INTO THE FUTURE")
 print("="*60)
 
 
-ior = np.linspace(train_data.shape[0], test_data[0], 1, )
 # Predicting n amount of times into the future
 n_predict_once = 50  # Predict 50 steps at a time
 test_points_seq = np.arange(train_data.shape[0], math.floor((train_data.shape[0] + (train_data.shape[0] * .091))), 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
