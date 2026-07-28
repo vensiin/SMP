@@ -478,7 +478,7 @@ print("="*60)
 
 # Predicting n amount of times into the future
 n_predict_once = 50  # Predict 50 steps at a time
-test_points_seq = np.arange(train_data.shape[0], math.floor((train_data.shape[0] + (train_data.shape[0] * .091))), 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
+test_points_seq = np.arange(train_data.shape[0], (all_mid_data.shape[0] - n_predict_once) + 1, 50).tolist()  # Creates a list of values from 11000 to 11999 with an increment of 50
 
 all_predictions = [] # Where all the predictions will be stored
 x_axis_seq = [] # Where the x-axis will be stored
@@ -521,7 +521,7 @@ for i, (predictions, x_axis) in enumerate(zip(all_predictions, x_axis_seq)):
 plt.title('Multi-Step Ahead Predictions', fontsize=18)
 plt.xlabel('Time Step', fontsize=14)
 plt.ylabel('Normalized Price', fontsize=14)
-plt.xlim(11000, 12500)  # Focus on prediction region
+plt.xlim(train_data.shape[0], all_mid_data.shape[0])  # Focus on prediction region
 plt.legend(fontsize=12)
 plt.grid(True, alpha=0.3)
 plt.show()
