@@ -13,7 +13,7 @@ def predict_sequence(model, initial_sequence, n_steps):
         List of predictions
     """
     predictions = [] # The predictions from the model
-    current_sequence = initial_sequence.copy() # The sequence of values
+    current_sequence = initial_sequence.copy() # A copy of the sequence of values so it does not affect the original copy
 
     # Loops n amount of times
     for _ in range(n_steps):

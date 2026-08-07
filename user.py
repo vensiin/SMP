@@ -34,3 +34,8 @@ class my_user():
 #
 # ior = np.linspace(train_data.shape[0], 12074, 3, )
 # print(ior)
+
+my_array = np.linspace(0, 12000, 5)
+
+for i in range(len(my_array[:-1])):
+    print(my_array[i])

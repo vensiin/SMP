@@ -34,13 +34,11 @@ api_key = os.getenv("API_KEY")
 user1 = my_user()
 user1.user_enter_ticker()
 
-ticker = "AAL"
-
 # Conditional that checks which method we are using
 if data_source == "alphavantage":
 
 
-    url_string = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={user1.return_ticker()}&outputsize=full&apikey={api_key}" # Website we are pulling data from
+    url_string = f"https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={user1.return_ticker()}&apikey={api_key}" # Website we are pulling data from
 
     file_to_save = f"stock_market_data-{user1.return_ticker()}.csv" # Name of the file we are saving the data to
 
@@ -49,15 +47,16 @@ if data_source == "alphavantage":
         with urllib.request.urlopen(url_string) as url: # Opens the alpha advantage website API
             data = json.loads(url.read().decode()) # Loads the data in JSON
 
+            rows = []
             data = data["Time Series (Daily)"] # Obtain the category key (dataset name) which you will be going through
-            df = pd.DataFrame(columns=["Date", "Low", "High", "Close",  "Open"]) # Create a dataframe with said columns
+            # df = pd.DataFrame(columns=["Date", "Low", "High", "Close",  "Open"]) # Create a dataframe with said columns
             for k,v in data.items(): # Iterate through the key,value pair where k is the date and v is the key:values inside the date (It is a dictionary inside a dictionary)
                 date = dt.datetime.strptime(k, "%Y-%m-%d") # Format the outer key (date)
-                data_row = [date.date(), float(v['3. low']), float(v['2. high']), # Format the key, value pairs inside of date
-                            float(v['4. close']), float(v['1. open'])] # Obtains the date from date by using date.date(), and all the values from the key/value pairs
-                df.loc[0,:] = data_row # Sets values for the entire row for each row
-                df.index = False # Assigns an index for every data row/date
-            df.to_csv(file_to_save)  # Saves the data as a CSV file since it is neater than JSON
+                rows.append([date.date(), float(v['3. low']), float(v['2. high']),
+                 float(v['4. close']), float(v['1. open'])]) # Appends each value for the keys in its own array
+                df = pd.DataFrame(rows, columns=["Date", "Low", "High", "Close", "Open"]) # Creates pd with the rows & columns
+                # df.index = False
+            df.to_csv(file_to_save, index=False)  # Saves the data as a CSV file since it is neater than JSON
             print(f"Data saved to: {file_to_save}") # Output that we saved the file
 
 
@@ -331,7 +330,6 @@ y_train = np.array(u_labels).T.reshape(num_of_sequences, num_unrollings, 1) # Te
 # print(f"y_train shape: {y_train.shape}")    # (500, 50, 1)
 print(f"Training on LAST time step predictions only")
 
-
 # How the model gets trained. Returns a history object with an attribute named history to view a report
 history = model.fit(
     X_train, # Training data
@@ -413,17 +411,17 @@ print("="*60)
 
 predictions = model.predict(X_train, verbose=0) # Returns numpy array of predictions. Predicts at the end of every sequence
 actual = y_train[:, -1, :]  # Last time step (what we trained to predict)
+model_mse = np.mean((actual - predictions) ** 2)
+model_mae = np.mean(np.abs(actual - predictions))
 print(f"actual: {actual}")
 print(f"shape of predictions: {predictions.shape}")
 print(f"Min actual Value: {actual.min()}") # Min val in actual values array
 print(f"Max actual Value: {actual.max()}") # Min val in actual values array
-# print(f"MSE: {np.mean((predictions - actual) ** 2)}")
-# print(f"MAE: {np.mean(np.abs(predictions - actual))}")
+print(f"Overall Model MSE: {model_mse}") # Mean Standard Error for model
+print(f"Overall Model MAE: {model_mae}") # Mean Absolute Error for model
 # print(f"Predictions shape: {predictions.shape}")  # (500, 1)
 # print(f"Actual values shape: {actual.shape}")     # (500, 1)
 
-# mse = np.mean((predictions - actual) ** 2) # Mean Standard Error
-# mae = np.mean(np.abs(predictions - actual) ** 2) # Mean Absolute Error
 
 # outputs the first 10 index, prediction, actual, and the error
 for i in range(10):
@@ -483,7 +481,7 @@ test_points_seq = np.arange(train_data.shape[0], (all_mid_data.shape[0] - n_pred
 all_predictions = [] # Where all the predictions will be stored
 x_axis_seq = [] # Where the x-axis will be stored
 
-# Goes through each element in the test_points_seqn
+# Goes through each element in the test_points_sequence
 for w_i in test_points_seq:
     # Get the sequence leading up to this point
     start_idx = w_i - num_unrollings # Starting index is 10950. Uses 50 timestep prices to predict 11000. 11000 is not included in the [10950, 11000]. goes up to 10999.
@@ -491,7 +489,7 @@ for w_i in test_points_seq:
 
     # Predict 50 steps ahead
     multi_step_predictions = predict_sequence(model, initial_seq, n_predict_once) # Runs the function with the trained model, the sequence of data formatted for model, and the #
-    all_predictions.append(multi_step_predictions)
+    all_predictions.append(multi_step_predictions) # Stores the n amount of predictions for that window. Nested array
 
     # Track x-axis positions
     x_axis = list(range(w_i, w_i + n_predict_once)) # Creates a list of (11000, 11000 + 50) and so on
@@ -525,3 +523,36 @@ plt.xlim(train_data.shape[0], all_mid_data.shape[0])  # Focus on prediction regi
 plt.legend(fontsize=12)
 plt.grid(True, alpha=0.3)
 plt.show()
+
+# With data augmentation (the training data)
+naive_bm = actual[:-1] # Every number except the last
+naive_mse = np.mean((actual[1:] - naive_bm) ** 2) # Every element except the first
+
+if naive_mse < model_mse:
+    print("Not learning")
+    print(f"Naive: {naive_mse:.5f} < Model {model_mse:.5f}")
+else:
+    print("Learning")
+    print(f"Naive: {naive_mse:.5f} > Model {model_mse:.5f}")
+
+# Without data augmentation (test data)
+
+pt_values, at_values = [], []
+
+for i in range(len(test_data) - num_unrollings):
+    pt_values.append(test_data[i:i + num_unrollings]) # 50 real prices
+    at_values.append(actual[i + num_unrollings]) # The next price after the 50 real prices
+
+# Prediction test values
+pt_values = np.array(pt_values).reshape(-1, num_unrollings, 1) # Reshape to enter into model
+# Actual test values
+at_values = np.array(at_values) # Real values
+
+# Non-data augmentation predictions
+nda_predictions = model.predict(pt_values, verbose=0).flatten()
+
+# MSE for non-data augmentation predictions
+mse_nda = np.mean((pt_values - nda_predictions) ** 2)
+
+naive_nda_pred = pt_values[:, -1, 0]
+naive_nda_mse = np.mean()
