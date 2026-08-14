@@ -57,7 +57,7 @@ class DataGenerator(object):
 
     # Returns one time step worth of data
     def next_batch(self):
-        batch_data = np.zeros((self.batch_size), dtype=np.float32) # Initializes a numpy array of 0's for inputs
+        batch_data = np.zeros((self.batch_size), dtype=np.float32) # Initializes a numpy array of 0's for inputs 
         batch_labels = np.zeros((self.batch_size), dtype=np.float32) # Initializes a numpy array of 0's for targets
 
         # Iterates over the sequences
